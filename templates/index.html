@@ -478,17 +478,79 @@
         }
 
         /* Input mode tabs */
-        .tab-bar { display: flex; gap: 4px; background: var(--surface2); border-radius: 8px; padding: 4px; margin-bottom: 18px; }
-        .tab-btn { flex: 1; padding: 7px; border: none; border-radius: 6px; cursor: pointer; font-size: .84rem; font-weight: 500; background: none; color: var(--muted); transition: background .15s, color .15s; }
-        .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 18px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 7px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .84rem;
+            font-weight: 500;
+            background: none;
+            color: var(--muted);
+            transition: background .15s, color .15s;
+        }
+
+        .tab-btn.active {
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+        }
 
         /* Manual pair rows */
-        .manual-pair-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
-        .manual-pair-row.no-translation { grid-template-columns: 1fr auto; }
-        .manual-pair-row button { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; padding: 0 10px; font-size: 1.1rem; transition: color .2s, border-color .2s; }
-        .manual-pair-row button:hover { color: var(--red); border-color: var(--red); }
-        #add-pair-btn { background: none; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 8px; transition: color .2s, border-color .2s; width: 100%; margin-top: 4px; }
-        #add-pair-btn:hover { color: var(--accent); border-color: var(--accent); }
+        .manual-pair-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .manual-pair-row.no-translation {
+            grid-template-columns: 1fr auto;
+        }
+
+        .manual-pair-row button {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 0 10px;
+            font-size: 1.1rem;
+            transition: color .2s, border-color .2s;
+        }
+
+        .manual-pair-row button:hover {
+            color: var(--red);
+            border-color: var(--red);
+        }
+
+        #add-pair-btn {
+            background: none;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: .85rem;
+            padding: 8px;
+            transition: color .2s, border-color .2s;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        #add-pair-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
     </style>
 </head>
 
@@ -543,12 +605,14 @@
                 <div class="row" style="margin-bottom:14px">
                     <div class="field">
                         <label for="manual-learning-lang">Learning language code <span class="required">*</span></label>
-                        <input type="text" id="manual-learning-lang" placeholder="e.g. ro" maxlength="10" />
+                        <input type="text" id="manual-learning-lang" placeholder="e.g. ro" maxlength="10"
+                            oninput="localStorage.setItem('tts_learning_lang', this.value)" />
                     </div>
                     <div class="field">
-                        <label for="manual-translation-lang">Translation language code <span class="hint" style="font-weight:400">(optional)</span></label>
+                        <label for="manual-translation-lang">Translation language code <span class="hint"
+                                style="font-weight:400">(optional)</span></label>
                         <input type="text" id="manual-translation-lang" placeholder="e.g. en" maxlength="10"
-                            oninput="updateManualTranslationVisibility()" />
+                            oninput="localStorage.setItem('tts_translation_lang', this.value); updateManualTranslationVisibility()" />
                     </div>
                 </div>
                 <div id="manual-pairs-list"></div>
@@ -709,6 +773,12 @@
         let detectedLangs = [];
         let pollingTimer = null;
         let activeTab = 'file';
+
+        // Seed lang code fields from localStorage, falling back to sensible defaults
+        document.getElementById('manual-learning-lang').value =
+            localStorage.getItem('tts_learning_lang') ?? 'en';
+        document.getElementById('manual-translation-lang').value =
+            localStorage.getItem('tts_translation_lang') ?? 'uk';
 
         // ── Tab switcher ───────────────────────────────────────
         function switchTab(mode) {
@@ -991,8 +1061,7 @@
             document.getElementById('voice-overrides-list').innerHTML = '';
             document.getElementById('rows').value = '';
             document.getElementById('manual-pairs-list').innerHTML = '';
-            document.getElementById('manual-learning-lang').value = '';
-            document.getElementById('manual-translation-lang').value = '';
+            // lang codes are intentionally kept — they reflect the user's last-used preference
             resetUpload();
         }
     </script>
