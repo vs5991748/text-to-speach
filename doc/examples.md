@@ -172,9 +172,12 @@ python app.py
 
 1. Drop `sentences.example.csv` onto the upload zone.
 2. The detected languages (`ro` / `en`) appear automatically; select `ro` as the learning language.
-3. Set **Target speeds** to `0.7 0.85 1.0`.
-4. Click **Generate audio**.
-5. When done, click **Download audio.mp3**.
+3. Set **Target speeds** to `0.7 0.85 1.0` — 1 to 3 values, each between `0.5` and `3.0`.
+4. Leave pauses at their defaults (both capped at 3s max).
+5. Click **Generate audio**.
+6. When done, click **Download audio.mp3**.
+
+> After a successful generation the **Generate audio** button shows a countdown (`Wait 60s…`) and re-enables automatically. Configurable via `GENERATION_COOLDOWN_SECONDS` in `.env`.
 
 ---
 

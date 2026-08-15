@@ -16,6 +16,7 @@ MAX_STRING_LENGTH=0      # accept strings of any length
 MAX_ROWS_PER_WINDOW=0    # no row-throughput cap
 RATE_LIMIT_REQUESTS=0    # no request-frequency cap
 GENERATION_TIMEOUT_SECONDS=0  # jobs run until they finish
+GENERATION_COOLDOWN_SECONDS=0 # no inter-generation wait
 ```
 
 Leaving a variable **blank** keeps the built-in default (same as omitting the line). Setting it to `0` is the explicit opt-out.
@@ -32,6 +33,7 @@ Leaving a variable **blank** keeps the built-in default (same as omitting the li
 | `RATE_LIMIT_REQUESTS` | `10` | Maximum `/generate` calls per user within the rate-limit window |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Width of the sliding time window (seconds) used by request and row-throughput limits |
 | `GENERATION_TIMEOUT_SECONDS` | `600` | Maximum seconds a generation job may run before it is aborted |
+| `GENERATION_COOLDOWN_SECONDS` | `60` | Minimum seconds a user must wait between generation requests |
 
 ---
 
@@ -140,6 +142,28 @@ Generation timed out after 120s.
 
 ---
 
+## GENERATION_COOLDOWN_SECONDS — inter-generation wait
+
+After a successful generation, the user must wait this many seconds before starting another one. Prevents back-to-back requests that could overload the TTS service.
+
+**.env**
+```dotenv
+GENERATION_COOLDOWN_SECONDS=60
+```
+
+Enforced on both client and server:
+- **Server** — rejects the `/generate` call with `429` and includes the seconds remaining in the error message.
+- **Browser** — the Generate button shows a countdown (`Wait 42s…`) immediately after a successful generation and re-enables automatically when the cooldown expires. The countdown survives a page refresh (stored in `localStorage`).
+
+The usage panel at the bottom of the page shows **Generation cooldown: ready** or **Xs remaining**.
+
+**What the user sees when exceeded:**
+```
+Please wait 42s before generating again.
+```
+
+---
+
 ## Example: strict public configuration
 
 `.env` for a server shared with multiple users where you want tight guardrails:
@@ -155,6 +179,7 @@ MAX_STRING_LENGTH=300
 RATE_LIMIT_REQUESTS=5
 RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_TIMEOUT_SECONDS=180
+GENERATION_COOLDOWN_SECONDS=120
 ```
 
 ## Example: relaxed local-only configuration
@@ -172,4 +197,5 @@ MAX_STRING_LENGTH=1000
 RATE_LIMIT_REQUESTS=50
 RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_TIMEOUT_SECONDS=1800
+GENERATION_COOLDOWN_SECONDS=0
 ```
