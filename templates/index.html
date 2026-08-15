@@ -477,6 +477,16 @@
             }
         }
 
+        /* Usage panel */
+        .usage-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+        .usage-row:last-child { border-bottom: none; }
+        .usage-label { font-size: .84rem; color: var(--muted); flex: 1; }
+        .usage-value { font-size: .84rem; font-weight: 600; white-space: nowrap; }
+        .usage-bar-wrap { width: 100px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+        .usage-bar { height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s; }
+        .usage-bar.warn { background: #f59e0b; }
+        .usage-bar.danger { background: var(--red); }
+
         /* Input mode tabs */
         .tab-bar {
             display: flex;
@@ -582,7 +592,8 @@
 
             <div class="tab-bar">
                 <button class="tab-btn" id="tab-file" onclick="switchTab('file')">&#128196; Upload file</button>
-                <button class="tab-btn active" id="tab-manual" onclick="switchTab('manual')">&#9998; Enter sentences</button>
+                <button class="tab-btn active" id="tab-manual" onclick="switchTab('manual')">&#9998; Enter
+                    sentences</button>
             </div>
 
             <!-- File upload panel -->
@@ -769,6 +780,7 @@
     <script>
         const MAX_ROWS = {{ max_rows }};
         const MAX_STRING_LENGTH = {{ max_string_length }};
+        const IS_SU = {{ 'true' if is_su else 'false' }};
         let fileId = null;
         let detectedLangs = [];
         let pollingTimer = null;
@@ -1066,6 +1078,53 @@
             document.getElementById('manual-pairs-list').innerHTML = '';
             // lang codes are intentionally kept — they reflect the user's last-used preference
             resetUpload();
+        }
+
+        // ── Usage / limits panel (regular users only) ──────────
+        if (!IS_SU) {
+            async function refreshLimits() {
+                try {
+                    const res = await fetch('/limits');
+                    const d = await res.json();
+                    if (!res.ok || d.is_su) return;
+
+                    const w = d.window_seconds;
+                    document.getElementById('limits-window-label').textContent = `(rolling ${w}s window)`;
+
+                    function row(label, used, limit, unit = '') {
+                        const disabled = !limit;
+                        const pct = disabled ? 0 : Math.min(100, (used / limit) * 100);
+                        const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
+                        const valText = disabled
+                            ? `${used}${unit} / <span style="color:var(--muted)">unlimited</span>`
+                            : `${used}${unit} / ${limit}${unit}`;
+                        const bar = disabled ? '' :
+                            `<div class="usage-bar-wrap"><div class="usage-bar ${cls}" style="width:${pct}%"></div></div>`;
+                        return `<div class="usage-row">
+                            <span class="usage-label">${label}</span>
+                            ${bar}
+                            <span class="usage-value">${valText}</span>
+                        </div>`;
+                    }
+
+                    const l = d.limits, u = d.used;
+                    document.getElementById('limits-rows').innerHTML =
+                        row('Requests this window', u.requests, l.rate_limit_requests) +
+                        row('Rows this window', u.rows, l.max_rows_per_window) +
+                        row('Max rows per file', '\u2014', 0) .replace('\u2014 / unlimited',
+                            l.max_rows ? `<span style="color:var(--text)">${l.max_rows}</span>` : '<span style="color:var(--muted)">unlimited</span>') +
+                        row('Max string length', '\u2014', 0).replace('\u2014 / unlimited',
+                            l.max_string_length ? `<span style="color:var(--text)">${l.max_string_length} chars</span>` : '<span style="color:var(--muted)">unlimited</span>') +
+                        row('Generation timeout', '\u2014', 0).replace('\u2014 / unlimited',
+                            l.generation_timeout ? `<span style="color:var(--text)">${l.generation_timeout}s</span>` : '<span style="color:var(--muted)">unlimited</span>');
+
+                    document.getElementById('limits-card').style.opacity = '1';
+                    document.getElementById('limits-refresh-dot').textContent =
+                        'updated ' + new Date().toLocaleTimeString();
+                } catch { /* silently ignore */ }
+            }
+            refreshLimits();
+            setInterval(refreshLimits, 15000);
         }
     </script>
 </body>

@@ -384,6 +384,33 @@ def status(job_id):
     return jsonify({"status": job["status"], "error": job.get("error"), "format": job.get("format")})
 
 
+@app.route("/limits")
+def limits_info():
+    if g.is_su:
+        return jsonify({"is_su": True})
+    username = g.username
+    now = time.monotonic()
+    with _rate_limit_lock:
+        req_used = len([t for t in _rate_limit.get(username, []) if now - t < RATE_LIMIT_WINDOW])
+    with _throughput_lock:
+        rows_used = sum(n for t, n in _throughput.get(username, []) if now - t < RATE_LIMIT_WINDOW)
+    return jsonify({
+        "is_su": False,
+        "window_seconds": RATE_LIMIT_WINDOW,
+        "limits": {
+            "max_rows": MAX_ROWS,
+            "max_rows_per_window": MAX_ROWS_PER_WINDOW,
+            "max_string_length": MAX_STRING_LENGTH,
+            "rate_limit_requests": RATE_LIMIT_REQUESTS,
+            "generation_timeout": GENERATION_TIMEOUT,
+        },
+        "used": {
+            "requests": req_used,
+            "rows": rows_used,
+        },
+    })
+
+
 @app.route("/download/<job_id>")
 def download(job_id):
     with _jobs_lock:
