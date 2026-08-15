@@ -478,14 +478,53 @@
         }
 
         /* Usage panel */
-        .usage-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
-        .usage-row:last-child { border-bottom: none; }
-        .usage-label { font-size: .84rem; color: var(--muted); flex: 1; }
-        .usage-value { font-size: .84rem; font-weight: 600; white-space: nowrap; }
-        .usage-bar-wrap { width: 100px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-        .usage-bar { height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s; }
-        .usage-bar.warn { background: #f59e0b; }
-        .usage-bar.danger { background: var(--red); }
+        .usage-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .usage-row:last-child {
+            border-bottom: none;
+        }
+
+        .usage-label {
+            font-size: .84rem;
+            color: var(--muted);
+            flex: 1;
+        }
+
+        .usage-value {
+            font-size: .84rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .usage-bar-wrap {
+            width: 100px;
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .usage-bar {
+            height: 100%;
+            border-radius: 3px;
+            background: var(--accent);
+            transition: width .4s;
+        }
+
+        .usage-bar.warn {
+            background: #f59e0b;
+        }
+
+        .usage-bar.danger {
+            background: var(--red);
+        }
 
         /* Input mode tabs */
         .tab-bar {
@@ -665,7 +704,8 @@
             <div class="field">
                 <label for="target-speeds">Target speeds</label>
                 <input type="text" id="target-speeds" value="0.85" placeholder="e.g. 0.7 0.85 1.0" />
-                <span class="hint">1–3 space-separated multipliers, each between 0.5 and 3.0. Each value = one repetition (1.0 = normal).</span>
+                <span class="hint">1–3 space-separated multipliers, each between 0.5 and 3.0. Each value = one
+                    repetition (1.0 = normal).</span>
                 <span class="hint" id="err-target-speeds" style="color:var(--red);display:none"></span>
             </div>
 
@@ -732,7 +772,7 @@
                         d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z"
                         clip-rule="evenodd" />
                 </svg>
-                Generate audio
+                <span id="generate-btn-label">Generate audio</span>
             </button>
         </div>
 
@@ -783,6 +823,7 @@
         const MAX_ROWS = {{ max_rows }};
         const MAX_STRING_LENGTH = {{ max_string_length }};
         const IS_SU = {{ 'true' if is_su else 'false' }};
+        const COOLDOWN_SECONDS = {{ cooldown_seconds }};
         let fileId = null;
         let detectedLangs = [];
         let pollingTimer = null;
@@ -1079,12 +1120,17 @@
                         document.getElementById('download-label').textContent =
                             isZip ? 'Download audio_pack.zip' : 'Download audio.mp3';
                         document.getElementById('status-done').style.display = 'block';
-                        btn.disabled = false;
+                        // Do NOT re-enable btn — start cooldown instead
                         fileId = null; // consumed
+                        if (COOLDOWN_SECONDS && !IS_SU) {
+                            localStorage.setItem('tts_last_gen', Date.now());
+                            startCooldownTimer(COOLDOWN_SECONDS, btn);
+                        }
+                        if (refreshLimits) refreshLimits();
                     } else if (data.status === 'error') {
                         clearInterval(pollingTimer);
                         showJobError(data.error || 'Unknown error during generation.');
-                        btn.disabled = false;
+                        btn.disabled = false; // allow retry on error
                     }
                 } catch {
                     // network hiccup — keep polling
@@ -1113,9 +1159,40 @@
             resetUpload();
         }
 
+        // ── Cooldown timer ─────────────────────────────────────
+        let _cooldownTimer = null;
+        function startCooldownTimer(seconds, btn) {
+            if (_cooldownTimer) clearInterval(_cooldownTimer);
+            const label = document.getElementById('generate-btn-label');
+            let remaining = seconds;
+            btn.disabled = true;
+            label.textContent = `Wait ${remaining}s…`;
+            _cooldownTimer = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(_cooldownTimer);
+                    btn.disabled = false;
+                    label.textContent = 'Generate audio';
+                } else {
+                    label.textContent = `Wait ${remaining}s…`;
+                }
+            }, 1000);
+        }
+
+        // Restore cooldown on page load (survives browser refresh)
+        if (!IS_SU && COOLDOWN_SECONDS) {
+            const lastGen = parseInt(localStorage.getItem('tts_last_gen') || '0', 10);
+            const elapsed = Math.floor((Date.now() - lastGen) / 1000);
+            const remaining = COOLDOWN_SECONDS - elapsed;
+            if (remaining > 0) {
+                startCooldownTimer(remaining, document.getElementById('generate-btn'));
+            }
+        }
+
         // ── Usage / limits panel (regular users only) ──────────
+        let refreshLimits;
         if (!IS_SU) {
-            async function refreshLimits() {
+            refreshLimits = async function () {
                 try {
                     const res = await fetch('/limits');
                     const d = await res.json();
@@ -1141,15 +1218,20 @@
                     }
 
                     const l = d.limits, u = d.used;
+                    const cdRemaining = d.cooldown_remaining || 0;
+                    const cdLabel = d.cooldown_seconds
+                        ? (cdRemaining > 0 ? `<span style="color:var(--accent)">${cdRemaining}s remaining</span>` : `<span style="color:var(--green)">ready</span>`)
+                        : '<span style="color:var(--muted)">disabled</span>';
                     document.getElementById('limits-rows').innerHTML =
                         row('Requests this window', u.requests, l.rate_limit_requests) +
                         row('Rows this window', u.rows, l.max_rows_per_window) +
-                        row('Max rows per file', '\u2014', 0) .replace('\u2014 / unlimited',
+                        row('Max rows per file', '\u2014', 0).replace('\u2014 / unlimited',
                             l.max_rows ? `<span style="color:var(--text)">${l.max_rows}</span>` : '<span style="color:var(--muted)">unlimited</span>') +
                         row('Max string length', '\u2014', 0).replace('\u2014 / unlimited',
                             l.max_string_length ? `<span style="color:var(--text)">${l.max_string_length} chars</span>` : '<span style="color:var(--muted)">unlimited</span>') +
                         row('Generation timeout', '\u2014', 0).replace('\u2014 / unlimited',
-                            l.generation_timeout ? `<span style="color:var(--text)">${l.generation_timeout}s</span>` : '<span style="color:var(--muted)">unlimited</span>');
+                            l.generation_timeout ? `<span style="color:var(--text)">${l.generation_timeout}s</span>` : '<span style="color:var(--muted)">unlimited</span>') +
+                        `<div class="usage-row"><span class="usage-label">Generation cooldown</span><span class="usage-value">${cdLabel}</span></div>`;
 
                     document.getElementById('limits-card').style.opacity = '1';
                     document.getElementById('limits-refresh-dot').textContent =

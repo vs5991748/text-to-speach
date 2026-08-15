@@ -34,6 +34,7 @@ MAX_STRING_LENGTH = _limit("MAX_STRING_LENGTH", 500)
 RATE_LIMIT_REQUESTS = _limit("RATE_LIMIT_REQUESTS", 10)
 RATE_LIMIT_WINDOW = _limit("RATE_LIMIT_WINDOW_SECONDS", 60)
 GENERATION_TIMEOUT = _limit("GENERATION_TIMEOUT_SECONDS", 600)
+GENERATION_COOLDOWN = _limit("GENERATION_COOLDOWN_SECONDS", 60)
 
 
 def _parse_users(env_var: str, is_su: bool) -> dict:
@@ -108,6 +109,10 @@ _throughput_lock = threading.Lock()
 _user_outdirs: dict = {}
 _user_outdirs_lock = threading.Lock()
 
+# Per-user last generation timestamp (monotonic)
+_last_gen_time: dict = {}
+_last_gen_time_lock = threading.Lock()
+
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
@@ -155,7 +160,8 @@ def index():
                            max_rows_per_window=MAX_ROWS_PER_WINDOW,
                            max_string_length=MAX_STRING_LENGTH,
                            rate_limit_window=RATE_LIMIT_WINDOW,
-                           generation_timeout=GENERATION_TIMEOUT)
+                           generation_timeout=GENERATION_TIMEOUT,
+                           cooldown_seconds=GENERATION_COOLDOWN)
 
 
 @app.route("/upload", methods=["POST"])
@@ -215,6 +221,16 @@ def generate():
     """Start a background generation job. Returns {job_id}."""
     if not g.is_su and _is_rate_limited(g.username):
         return jsonify({"error": f"Rate limit exceeded: max {RATE_LIMIT_REQUESTS} requests per {RATE_LIMIT_WINDOW}s."}), 429
+
+    if not g.is_su and GENERATION_COOLDOWN:
+        user_key_cd = g.username or "_anon_"
+        now_cd = time.monotonic()
+        with _last_gen_time_lock:
+            last = _last_gen_time.get(user_key_cd, 0)
+            remaining = GENERATION_COOLDOWN - (now_cd - last)
+        if remaining > 0:
+            return jsonify({"error": f"Please wait {int(remaining) + 1}s before generating again.",
+                            "retry_after": int(remaining) + 1}), 429
 
     # Clean up the previous split output dir for this user
     user_key = g.username or "_anon_"
@@ -285,6 +301,12 @@ def generate():
         daemon=True,
     )
     thread.start()
+
+    # Record generation time for cooldown tracking
+    if not g.is_su and GENERATION_COOLDOWN:
+        with _last_gen_time_lock:
+            _last_gen_time[g.username or "_anon_"] = time.monotonic()
+
     return jsonify({"job_id": job_id})
 
 
@@ -402,9 +424,14 @@ def limits_info():
         req_used = len([t for t in _rate_limit.get(username, []) if now - t < RATE_LIMIT_WINDOW])
     with _throughput_lock:
         rows_used = sum(n for t, n in _throughput.get(username, []) if now - t < RATE_LIMIT_WINDOW)
+    with _last_gen_time_lock:
+        last_gen = _last_gen_time.get(username or "_anon_", 0)
+    remaining = max(0, int(GENERATION_COOLDOWN - (now - last_gen)) + 1) if GENERATION_COOLDOWN and last_gen else 0
     return jsonify({
         "is_su": False,
         "window_seconds": RATE_LIMIT_WINDOW,
+        "cooldown_seconds": GENERATION_COOLDOWN,
+        "cooldown_remaining": remaining,
         "limits": {
             "max_rows": MAX_ROWS,
             "max_rows_per_window": MAX_ROWS_PER_WINDOW,
