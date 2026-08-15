@@ -581,8 +581,8 @@
             </div>
 
             <div class="tab-bar">
-                <button class="tab-btn active" id="tab-file" onclick="switchTab('file')">&#128196; Upload file</button>
-                <button class="tab-btn" id="tab-manual" onclick="switchTab('manual')">&#9998; Enter sentences</button>
+                <button class="tab-btn" id="tab-file" onclick="switchTab('file')">&#128196; Upload file</button>
+                <button class="tab-btn active" id="tab-manual" onclick="switchTab('manual')">&#9998; Enter sentences</button>
             </div>
 
             <!-- File upload panel -->
@@ -772,13 +772,16 @@
         let fileId = null;
         let detectedLangs = [];
         let pollingTimer = null;
-        let activeTab = 'file';
+        let activeTab = 'manual';
 
         // Seed lang code fields from localStorage, falling back to sensible defaults
         document.getElementById('manual-learning-lang').value =
             localStorage.getItem('tts_learning_lang') ?? 'en';
         document.getElementById('manual-translation-lang').value =
             localStorage.getItem('tts_translation_lang') ?? 'uk';
+
+        // Show manual panel by default
+        switchTab('manual');
 
         // ── Tab switcher ───────────────────────────────────────
         function switchTab(mode) {
