@@ -249,9 +249,17 @@ def generate():
         target_speeds = [0.85]
     if not target_speeds:
         target_speeds = [0.85]
+    if len(target_speeds) > 3:
+        return jsonify({"error": "Maximum 3 speed repetitions allowed."}), 400
+    if any(s < 0.5 or s > 3.0 for s in target_speeds):
+        return jsonify({"error": "Each speed must be between 0.5 and 3.0."}), 400
 
     pause_after_target = float(data.get("pause_after_target", 1.0))
     pause_after_translation = float(data.get("pause_after_translation", 1.5))
+    if pause_after_target > 3.0:
+        return jsonify({"error": "Pause after target must not exceed 3s."}), 400
+    if pause_after_translation > 3.0:
+        return jsonify({"error": "Pause after translation must not exceed 3s."}), 400
     no_translation = bool(data.get("no_translation", False))
     split = bool(data.get("split", False))
     rows_spec = str(data.get("rows", "")).strip()

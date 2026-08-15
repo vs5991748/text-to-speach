@@ -665,8 +665,8 @@
             <div class="field">
                 <label for="target-speeds">Target speeds</label>
                 <input type="text" id="target-speeds" value="0.85" placeholder="e.g. 0.7 0.85 1.0" />
-                <span class="hint">Space-separated speed multipliers. Each value = one repetition of the learning
-                    sentence (1.0 = normal).</span>
+                <span class="hint">1–3 space-separated multipliers, each between 0.5 and 3.0. Each value = one repetition (1.0 = normal).</span>
+                <span class="hint" id="err-target-speeds" style="color:var(--red);display:none"></span>
             </div>
 
             <div class="field">
@@ -679,11 +679,13 @@
             <div class="row">
                 <div class="field">
                     <label for="pause-target">Pause after target (s)</label>
-                    <input type="number" id="pause-target" value="1.0" min="0" step="0.5" />
+                    <input type="number" id="pause-target" value="1.0" min="0" max="3" step="0.5" />
+                    <span class="hint" id="err-pause-target" style="color:var(--red);display:none"></span>
                 </div>
                 <div class="field">
                     <label for="pause-translation">Pause after translation (s)</label>
-                    <input type="number" id="pause-translation" value="1.5" min="0" step="0.5" />
+                    <input type="number" id="pause-translation" value="1.5" min="0" max="3" step="0.5" />
+                    <span class="hint" id="err-pause-translation" style="color:var(--red);display:none"></span>
                 </div>
             </div>
 
@@ -838,9 +840,12 @@
 
         async function submitManual() {
             showUploadError('');
+            const langRe = /^[a-zA-Z]{2,10}$/;
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
             if (!learningLang) { showUploadError('Learning language code is required.'); return; }
+            if (!langRe.test(learningLang)) { showUploadError(`Invalid learning language code "${learningLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
             const translationLang = document.getElementById('manual-translation-lang').value.trim();
+            if (translationLang && !langRe.test(translationLang)) { showUploadError(`Invalid translation language code "${translationLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
             const effectiveTransLang = translationLang || '_';
             const pairs = [];
             document.querySelectorAll('.manual-pair-row').forEach(row => {
@@ -991,6 +996,34 @@
         // ── Generate ───────────────────────────────────────────
         async function startGeneration() {
             if (!fileId) return;
+
+            // ── Client-side validation ──────────────────────────
+            let valid = true;
+            const fieldErr = (id, msg) => {
+                const el = document.getElementById(id);
+                el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+                if (msg) valid = false;
+            };
+
+            const speedsRaw = document.getElementById('target-speeds').value.trim();
+            const speeds = speedsRaw.split(/\s+/).filter(Boolean).map(Number);
+            if (speeds.some(isNaN) || speeds.length === 0) {
+                fieldErr('err-target-speeds', 'Enter 1–3 space-separated numbers.');
+            } else if (speeds.length > 3) {
+                fieldErr('err-target-speeds', 'Maximum 3 repetitions allowed.');
+            } else if (speeds.some(v => v < 0.5 || v > 3.0)) {
+                fieldErr('err-target-speeds', 'Each speed must be between 0.5 and 3.0.');
+            } else {
+                fieldErr('err-target-speeds', '');
+            }
+
+            const pTarget = parseFloat(document.getElementById('pause-target').value);
+            const pTranslation = parseFloat(document.getElementById('pause-translation').value);
+            fieldErr('err-pause-target', (!isNaN(pTarget) && pTarget > 3) ? 'Maximum pause is 3s.' : '');
+            fieldErr('err-pause-translation', (!isNaN(pTranslation) && pTranslation > 3) ? 'Maximum pause is 3s.' : '');
+
+            if (!valid) return;
+            // ───────────────────────────────────────────────────
 
             const btn = document.getElementById('generate-btn');
             btn.disabled = true;
