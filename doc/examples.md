@@ -178,6 +178,20 @@ python app.py
 
 ---
 
+### Enter sentences manually (no file needed)
+
+1. Click the **✎ Enter sentences** tab in Step 1.
+2. Set **Learning language code** to `ro` and **Translation language code** to `en`.
+3. Click **+ Add sentence pair** and type your pairs:
+   - Learning: `Bună dimineața!` → Translation: `Good morning!`
+   - Learning: `Cum te simți astăzi?` → Translation: `How are you feeling today?`
+4. Click **Continue →** — the pairs are serialised to JSON and validated server-side.
+5. Configure options and generate as normal.
+
+Leave **Translation language code** blank to skip translation audio automatically (the *Skip translation audio* toggle will be pre-checked).
+
+---
+
 ### Split mode — one file per sentence pair
 
 Enable **One file per record** before generating. Instead of a single track you receive a ZIP archive where each sentence pair is its own MP3:

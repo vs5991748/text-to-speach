@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Python 3.9+
+- Python **3.12** (pinned via `.python-version`; `pydub` is not compatible with Python 3.13+)
 - `ffmpeg` on your PATH (used by `pydub` to stitch audio clips)
 
 ---
@@ -51,6 +51,7 @@ pip install -r requirements.txt
 | `pydub` | Audio stitching and MP3 export |
 | `flask` | Web interface server |
 | `python-dotenv` | Loads `.env` configuration at startup |
+| `gunicorn` | Production WSGI server (used by Render and similar platforms) |
 
 ---
 
@@ -102,3 +103,18 @@ flask --app app run --host 0.0.0.0 --port 8080
 ```
 
 > **Do not expose the server to the public internet without HTTPS** — Basic Auth sends credentials in base64, which is trivially decoded without TLS.
+
+---
+
+## 7. Deploy to Render (or similar)
+
+The repo includes `.python-version` (3.12) and `gunicorn` in `requirements.txt`, so Render detects and runs it automatically.
+
+Set environment variables in the Render dashboard (same keys as `.env`) — do **not** commit your real `.env` file.
+
+Render's default start command:
+```
+gunicorn app:app
+```
+
+> The in-memory job store works fine on a single-worker instance. If you scale to multiple workers or instances, replace it with a shared store (Redis etc.).

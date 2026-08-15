@@ -164,4 +164,5 @@ python generate_audio.py --input sentences.example.en-uk.json --learning-lang en
 | `sentences.example.csv` | Example input file, Romanian/English (CSV) |
 | `sentences.example.en-uk.json` | Example input file, English/Ukrainian (JSON) |
 | `sentences.example.en-uk.csv` | Example input file, English/Ukrainian (CSV) |
-| `requirements.txt` | Python dependencies (`edge-tts`, `pydub`, `flask`, `python-dotenv`) |
+| `requirements.txt` | Python dependencies (`edge-tts`, `pydub`, `flask`, `python-dotenv`, `gunicorn`) |
+| `.python-version` | Pins Python to 3.12 for `pydub` compatibility |

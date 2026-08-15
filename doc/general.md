@@ -31,14 +31,18 @@ See [installation.md](installation.md) for setup and the main [README](../README
 
 ### 2. Web interface
 
-A browser-based UI: upload a CSV or JSON file, set options through a form, wait for generation, and download the result.
+A browser-based UI with two source modes, set options through a form, wait for generation, and download the result.
 
 ```bash
 python app.py
 # → open http://localhost:5000
 ```
 
-The web interface supports all the same options as the CLI (speeds, pauses, voice overrides, skip-translation, split mode) plus server-side [limits](limits.md) and [authentication](authorization.md).
+**Source modes:**
+- **Upload file** — drag & drop or browse a `.csv` / `.json` file
+- **Enter sentences** — type pairs directly into the form; no file needed. Specify language codes, add as many pairs as you need, translation column is optional.
+
+The web interface supports all the same options as the CLI (speeds, pauses, voice overrides, skip-translation, split mode, row range) plus server-side [limits](limits.md) and [authentication](authorization.md).
 In **split mode** the download is a ZIP archive instead of a single MP3.
 
 ---
