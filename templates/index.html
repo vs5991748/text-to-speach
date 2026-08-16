@@ -1131,14 +1131,10 @@
                         if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
                     });
                     document.getElementById('ai-word').select();
-                    if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
-                        localStorage.setItem('tts_last_suggest', Date.now());
-                        document.getElementById('ai-spinner').style.display = 'none';
-                        _startSuggestTimer(SUGGEST_COOLDOWN_SECONDS, btn);
-                    } else {
-                        document.getElementById('ai-spinner').style.display = 'none';
-                        btn.disabled = false; btn.textContent = 'Generate';
-                    }
+                    const uiCooldown = SUGGEST_COOLDOWN_SECONDS || 60;
+                    if (!IS_SU) localStorage.setItem('tts_last_suggest', Date.now());
+                    document.getElementById('ai-spinner').style.display = 'none';
+                    _startSuggestTimer(uiCooldown, btn);
                 }).catch(err => {
                     console.error('[suggest]', err);
                     errEl.textContent = err.message || 'LLM error.'; errEl.style.display = 'block';
