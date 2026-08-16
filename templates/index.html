@@ -1100,7 +1100,11 @@
                         document.getElementById('ai-spinner').style.display = 'none';
                         return;
                     }
-                    addManualRow();
+                    // Reuse the last row if it is empty, otherwise add a new one
+                    const existingRows = document.querySelectorAll('.manual-pair-row');
+                    const lastRow = existingRows[existingRows.length - 1];
+                    const lastIsEmpty = lastRow && !lastRow.querySelector('.manual-learning').value.trim();
+                    if (!lastIsEmpty) addManualRow();
                     const rows = document.querySelectorAll('.manual-pair-row');
                     const last = rows[rows.length - 1];
                     last.querySelector('.manual-learning').value = data.learning || '';
