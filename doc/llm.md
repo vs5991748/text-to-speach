@@ -131,26 +131,38 @@ LLM_SUGGEST_COOLDOWN_SECONDS=0
 
 `max_tokens` caps the number of tokens the model may generate in a single response.
 
-**Why it matters for reasoning models** — models like `openai/gpt-oss`, `deepseek/deepseek-r1`, or any `o1`-style model spend tokens on internal *reasoning* before writing the actual answer. With the default of 600, a reasoning model can easily exhaust the budget while still thinking, leaving `content: null` in the response. For these models, set a higher value.
+**Why it matters for reasoning models** — models like `openai/gpt-oss`, `deepseek/deepseek-r1`, or any `o1`-style model spend tokens on internal *reasoning* before writing the actual answer. With the default of 600, a reasoning model can easily exhaust the budget while still thinking, leaving `content: null` or truncated JSON in the response. For these models, set a higher value.
+
+**Why it matters when generating multiple pairs** — asking the AI phrase generator to produce 5 or 10 pairs at once multiplies the output length. Budget roughly 50–80 tokens per sentence pair on top of any reasoning overhead.
 
 **.env**
 ```dotenv
-# Standard chat models (gemma, mistral, llama, …)
+# Standard chat model, 1–3 pairs
 LLM_MAX_TOKENS=600
 
-# Reasoning / thinking models (gpt-oss, deepseek-r1, o1, …)
+# Reasoning / thinking model (gpt-oss, deepseek-r1, o1, …), 1 pair
 LLM_MAX_TOKENS=1500
+
+# Reasoning model, 5–10 pairs
+LLM_MAX_TOKENS=3000
+
+# Any model, 10 pairs
+LLM_MAX_TOKENS=2000
 ```
 
-| Model type | Recommended value |
+| Scenario | Recommended `LLM_MAX_TOKENS` |
 |---|---|
-| Standard chat (gemma, mistral, llama) | `600` |
-| Reasoning / thinking models | `1500` – `2000` |
+| Standard chat model (gemma, mistral, llama), 1–3 pairs | `600` |
+| Reasoning model (gpt-oss, deepseek-r1, o1), 1 pair | `1500` |
+| Reasoning model, 5–10 pairs | `3000` |
+| Any model, 10 pairs | `2000`+ |
+
+> **Tip:** For multi-pair generation, non-reasoning models (e.g. `google/gemma-2-9b-it:free` on OpenRouter, or `llama-3.1-8b-instant` on Groq) are faster and use far fewer tokens than reasoning models. Reserve reasoning models for single-pair generation where quality matters most.
 
 **What happens when the limit is too low:**
 ```
-[LLM] null content finish_reason=length … (model hit token limit during reasoning)
-LLM error: LLM returned no usable content (model hit token limit during reasoning …)
+[LLM] attempt 1 parse error: JSONDecodeError: Expecting value … finish_reason=length
+LLM error: LLM returned no usable content (token limit hit during reasoning — raise LLM_MAX_TOKENS)
 ```
 
 ---
