@@ -921,6 +921,7 @@
         const MAX_STRING_LENGTH = {{ max_string_length }};
         const IS_SU = {{ 'true' if is_su else 'false' }};
         const COOLDOWN_SECONDS = {{ cooldown_seconds }};
+        const SUGGEST_COOLDOWN_SECONDS = {{ llm_suggest_cooldown }};
         let fileId = null;
         let detectedLangs = [];
         let pollingTimer = null;
@@ -987,6 +988,27 @@
         }
 
         {% if llm_enabled %}
+        let _suggestTimer = null;
+        function _startSuggestTimer(seconds, btn) {
+            if (_suggestTimer) clearInterval(_suggestTimer);
+            let rem = seconds;
+            btn.disabled = true; btn.textContent = `Wait ${rem}s`;
+            _suggestTimer = setInterval(() => {
+                rem--;
+                if (rem <= 0) { clearInterval(_suggestTimer); btn.disabled = false; btn.textContent = 'Generate'; }
+                else { btn.textContent = `Wait ${rem}s`; }
+            }, 1000);
+        }
+        // Restore suggest cooldown on page load
+        if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
+            const lastS = parseInt(localStorage.getItem('tts_last_suggest') || '0', 10);
+            const remS = SUGGEST_COOLDOWN_SECONDS - Math.floor((Date.now() - lastS) / 1000);
+            if (remS > 0) {
+                const btn = document.querySelector('[onclick="aiSuggest(this)"]');
+                if (btn) _startSuggestTimer(remS, btn);
+            }
+        }
+
         async function aiSuggest(btn) {
             const word = document.getElementById('ai-word').value.trim();
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
@@ -995,7 +1017,6 @@
             errEl.style.display = 'none';
             if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
             if (!learningLang) { errEl.textContent = 'Set the learning language code first.'; errEl.style.display = 'block'; return; }
-            const origText = btn.textContent;
             btn.disabled = true; btn.textContent = '…';
             try {
                 const res = await fetch('/suggest', {
@@ -1004,15 +1025,28 @@
                     body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang }),
                 });
                 const data = await res.json();
-                if (!res.ok) { errEl.textContent = data.error || 'Failed.'; errEl.style.display = 'block'; return; }
+                if (!res.ok) {
+                    errEl.textContent = data.error || 'Failed.';
+                    errEl.style.display = 'block';
+                    btn.disabled = false; btn.textContent = 'Generate';
+                    return;
+                }
                 addManualRow();
                 const rows = document.querySelectorAll('.manual-pair-row');
                 const last = rows[rows.length - 1];
                 last.querySelector('.manual-learning').value = data.learning || '';
                 if (data.translation) last.querySelector('.manual-translation').value = data.translation;
                 document.getElementById('ai-word').value = '';
-            } catch { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; }
-            finally { btn.disabled = false; btn.textContent = origText; }
+                if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
+                    localStorage.setItem('tts_last_suggest', Date.now());
+                    _startSuggestTimer(SUGGEST_COOLDOWN_SECONDS, btn);
+                } else {
+                    btn.disabled = false; btn.textContent = 'Generate';
+                }
+            } catch {
+                errEl.textContent = 'Network error.'; errEl.style.display = 'block';
+                btn.disabled = false; btn.textContent = 'Generate';
+            }
         }
         {% endif %}
 

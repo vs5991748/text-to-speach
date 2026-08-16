@@ -38,6 +38,7 @@ RATE_LIMIT_REQUESTS = _limit("RATE_LIMIT_REQUESTS", 10)
 RATE_LIMIT_WINDOW = _limit("RATE_LIMIT_WINDOW_SECONDS", 60)
 GENERATION_TIMEOUT = _limit("GENERATION_TIMEOUT_SECONDS", 600)
 GENERATION_COOLDOWN = _limit("GENERATION_COOLDOWN_SECONDS", 60)
+LLM_SUGGEST_COOLDOWN = _limit("LLM_SUGGEST_COOLDOWN_SECONDS", 60)
 
 # Default provider for all users; SU users can get a separate default
 LLM_DEFAULT = os.getenv("LLM_DEFAULT", "openrouter").strip().lower()
@@ -161,6 +162,10 @@ _user_outdirs_lock = threading.Lock()
 _last_gen_time: dict = {}
 _last_gen_time_lock = threading.Lock()
 
+# Per-user last AI suggest timestamp (monotonic)
+_last_suggest_time: dict = {}
+_last_suggest_time_lock = threading.Lock()
+
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
@@ -241,6 +246,7 @@ def index():
                            known_voices=LANG_VOICES,
                            is_su=g.is_su,
                            llm_enabled=bool(_llm_config_for(g.username, g.is_su)),
+                           llm_suggest_cooldown=LLM_SUGGEST_COOLDOWN,
                            llm_lock_reason=(
                                None if _llm_config_for(g.username, g.is_su)
                                else ("No LLM provider is configured on this server."
@@ -512,6 +518,15 @@ def suggest():
         return jsonify({"error": "AI suggestions are not configured for your account."}), 503
     if not g.is_su and _is_rate_limited(g.username):
         return jsonify({"error": "Rate limit exceeded."}), 429
+    if not g.is_su and LLM_SUGGEST_COOLDOWN:
+        user_key = g.username or "_anon_"
+        now_s = time.monotonic()
+        with _last_suggest_time_lock:
+            remaining = LLM_SUGGEST_COOLDOWN - (now_s - _last_suggest_time.get(user_key, 0))
+        if remaining > 0:
+            secs = int(remaining) + 1
+            return jsonify({"error": f"Please wait {secs}s before generating another phrase.",
+                            "retry_after": secs}), 429
     data = request.get_json(silent=True) or {}
     word = str(data.get("word", "")).strip()
     learning_lang = str(data.get("learning_lang", "")).strip()
@@ -522,6 +537,9 @@ def suggest():
         result = _call_llm(cfg, word, learning_lang, translation_lang)
         if "learning" not in result:
             raise ValueError("LLM response missing 'learning' field.")
+        if not g.is_su and LLM_SUGGEST_COOLDOWN:
+            with _last_suggest_time_lock:
+                _last_suggest_time[g.username or "_anon_"] = time.monotonic()
         return jsonify(result)
     except urllib.error.URLError as e:
         return jsonify({"error": f"Cannot reach LLM: {e.reason}"}), 502
