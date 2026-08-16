@@ -127,6 +127,34 @@ LLM_SUGGEST_COOLDOWN_SECONDS=0
 
 ---
 
+## LLM_MAX_TOKENS — controlling response length
+
+`max_tokens` caps the number of tokens the model may generate in a single response.
+
+**Why it matters for reasoning models** — models like `openai/gpt-oss`, `deepseek/deepseek-r1`, or any `o1`-style model spend tokens on internal *reasoning* before writing the actual answer. With the default of 600, a reasoning model can easily exhaust the budget while still thinking, leaving `content: null` in the response. For these models, set a higher value.
+
+**.env**
+```dotenv
+# Standard chat models (gemma, mistral, llama, …)
+LLM_MAX_TOKENS=600
+
+# Reasoning / thinking models (gpt-oss, deepseek-r1, o1, …)
+LLM_MAX_TOKENS=1500
+```
+
+| Model type | Recommended value |
+|---|---|
+| Standard chat (gemma, mistral, llama) | `600` |
+| Reasoning / thinking models | `1500` – `2000` |
+
+**What happens when the limit is too low:**
+```
+[LLM] null content finish_reason=length … (model hit token limit during reasoning)
+LLM error: LLM returned no usable content (model hit token limit during reasoning …)
+```
+
+---
+
 ## Full reference
 
 | Variable | Default | Description |
@@ -135,6 +163,7 @@ LLM_SUGGEST_COOLDOWN_SECONDS=0
 | `LLM_SU_DEFAULT` | *(blank)* | Provider for superusers (`SU_USERS`). Falls back to `LLM_DEFAULT` if blank. |
 | `LLM_USER_<USERNAME>` | *(none)* | Per-user override (edge cases). Takes priority over role defaults. |
 | `LLM_SUGGEST_COOLDOWN_SECONDS` | `60` | Seconds a regular user must wait between AI phrase requests (0 = disabled). SU users are exempt. |
+| `LLM_MAX_TOKENS` | `600` | Max tokens per LLM response. Increase to `1500`+ for reasoning/thinking models. |
 | `LLM_OPENROUTER_MODEL` | `google/gemma-2-9b-it:free` | OpenRouter model ID |
 | `LLM_OPENROUTER_API_KEY` | *(required)* | OpenRouter API key |
 | `LLM_OPENROUTER_BASE_URL` | `https://openrouter.ai/api` | Override only if using a proxy |
