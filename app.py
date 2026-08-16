@@ -170,6 +170,10 @@ _last_gen_time_lock = threading.Lock()
 _last_suggest_time: dict = {}
 _last_suggest_time_lock = threading.Lock()
 
+# Background suggest jobs: suggest_id -> {status, pairs, error}
+_suggest_jobs: dict = {}
+_suggest_jobs_lock = threading.Lock()
+
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
@@ -619,26 +623,46 @@ def suggest():
     count = max(1, min(10, int(data.get("count", 1) or 1)))
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
+
+    suggest_id = str(uuid.uuid4())
+    with _suggest_jobs_lock:
+        _suggest_jobs[suggest_id] = {"status": "pending", "pairs": None, "error": None}
+
+    # Record cooldown time now (optimistic); worker runs in background thread
+    if not g.is_su and LLM_SUGGEST_COOLDOWN:
+        with _last_suggest_time_lock:
+            _last_suggest_time[g.username or "_anon_"] = time.monotonic()
+
+    threading.Thread(
+        target=_run_suggest,
+        args=(suggest_id, cfg, word, learning_lang, translation_lang, count),
+        daemon=True,
+    ).start()
+    return jsonify({"suggest_id": suggest_id})
+
+
+def _run_suggest(suggest_id, cfg, word, learning_lang, translation_lang, count):
+    with _suggest_jobs_lock:
+        _suggest_jobs[suggest_id]["status"] = "running"
     try:
         pairs = _call_llm(cfg, word, learning_lang, translation_lang, count)
-        if not g.is_su and LLM_SUGGEST_COOLDOWN:
-            with _last_suggest_time_lock:
-                _last_suggest_time[g.username or "_anon_"] = time.monotonic()
-        return jsonify({"pairs": pairs})
-    except urllib.error.HTTPError as e:
-        body = ""
-        try:
-            body = e.read().decode("utf-8", errors="replace")[:500]
-        except Exception:
-            pass
-        print(f"[LLM] HTTP {e.code} {e.reason} from {cfg['base_url']}: {body}", file=sys.stderr, flush=True)
-        return jsonify({"error": f"LLM returned HTTP {e.code} {e.reason}. Check Render logs."}), 502
-    except urllib.error.URLError as e:
-        print(f"[LLM] URLError: {e.reason}", file=sys.stderr, flush=True)
-        return jsonify({"error": f"Cannot reach LLM ({e.reason}). Check LLM_BASE_URL in config."}), 502
+        with _suggest_jobs_lock:
+            _suggest_jobs[suggest_id]["status"] = "done"
+            _suggest_jobs[suggest_id]["pairs"] = pairs
     except Exception as e:
-        print(f"[LLM] Error: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
-        return jsonify({"error": f"LLM error ({type(e).__name__}): {e}"}), 500
+        print(f"[LLM] suggest job failed: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        with _suggest_jobs_lock:
+            _suggest_jobs[suggest_id]["status"] = "error"
+            _suggest_jobs[suggest_id]["error"] = f"{type(e).__name__}: {e}"
+
+
+@app.route("/suggest/status/<suggest_id>")
+def suggest_status(suggest_id):
+    with _suggest_jobs_lock:
+        job = _suggest_jobs.get(suggest_id)
+    if not job:
+        return jsonify({"error": "Unknown suggest ID."}), 404
+    return jsonify({"status": job["status"], "pairs": job.get("pairs"), "error": job.get("error")})
 
 
 @app.route("/limits")

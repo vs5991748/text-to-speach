@@ -1090,60 +1090,69 @@
                 if (!learningLang) { errEl.textContent = 'Set the learning language code first.'; errEl.style.display = 'block'; return; }
                 btn.disabled = true; btn.textContent = 'Generate';
                 document.getElementById('ai-spinner').style.display = 'block';
-                // Frontend timeout matches backend: (timeout + retries * backoff) + 20s buffer
-                const abortCtrl = new AbortController();
-                const abortTimer = setTimeout(() => abortCtrl.abort(), 240000);
                 try {
-                    const res = await fetch('/suggest', {
+                    // POST starts a background job — get suggest_id, then poll
+                    const startRes = await fetch('/suggest', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang, count }),
-                        signal: abortCtrl.signal,
                     });
-                    const data = await res.json();
-                    if (!res.ok) {
-                        errEl.textContent = data.error || 'Failed.';
+                    const startData = await startRes.json();
+                    if (!startRes.ok) {
+                        errEl.textContent = startData.error || 'Failed.';
                         errEl.style.display = 'block';
                         btn.disabled = false;
                         document.getElementById('ai-spinner').style.display = 'none';
                         return;
                     }
-                    const pairs = data.pairs || [];
-                    pairs.forEach((pair, idx) => {
-                        if (idx === 0) {
-                            // Reuse the last empty row for the first pair
-                            const existingRows = document.querySelectorAll('.manual-pair-row');
-                            const lastRow = existingRows[existingRows.length - 1];
-                            const lastIsEmpty = lastRow && !lastRow.querySelector('.manual-learning').value.trim();
-                            if (!lastIsEmpty) addManualRow();
+                    const suggestId = startData.suggest_id;
+                    // Poll until done or error
+                    await new Promise((resolve, reject) => {
+                        const poll = setInterval(async () => {
+                            try {
+                                const r = await fetch(`/suggest/status/${suggestId}`);
+                                const d = await r.json();
+                                if (d.status === 'done') {
+                                    clearInterval(poll);
+                                    resolve(d.pairs || []);
+                                } else if (d.status === 'error') {
+                                    clearInterval(poll);
+                                    reject(new Error(d.error || 'LLM error'));
+                                }
+                            } catch (e) { clearInterval(poll); reject(e); }
+                        }, 2000);
+                    }).then(pairs => {
+                        pairs.forEach((pair, idx) => {
+                            if (idx === 0) {
+                                const existingRows = document.querySelectorAll('.manual-pair-row');
+                                const lastRow = existingRows[existingRows.length - 1];
+                                if (!lastRow || lastRow.querySelector('.manual-learning').value.trim()) addManualRow();
+                            } else { addManualRow(); }
+                            const rows = document.querySelectorAll('.manual-pair-row');
+                            const last = rows[rows.length - 1];
+                            last.querySelector('.manual-learning').value = pair.learning || '';
+                            if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
+                        });
+                        document.getElementById('ai-word').select();
+                        if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
+                            localStorage.setItem('tts_last_suggest', Date.now());
+                            document.getElementById('ai-spinner').style.display = 'none';
+                            _startSuggestTimer(SUGGEST_COOLDOWN_SECONDS, btn);
                         } else {
-                            addManualRow();
+                            document.getElementById('ai-spinner').style.display = 'none';
+                            btn.disabled = false; btn.textContent = 'Generate';
                         }
-                        const rows = document.querySelectorAll('.manual-pair-row');
-                        const last = rows[rows.length - 1];
-                        last.querySelector('.manual-learning').value = pair.learning || '';
-                        if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
-                    });
-                    // Word field intentionally kept — allows generating another pair with the same word
-                    document.getElementById('ai-word').select();
-                    if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
-                        localStorage.setItem('tts_last_suggest', Date.now());
-                        document.getElementById('ai-spinner').style.display = 'none';
-                        _startSuggestTimer(SUGGEST_COOLDOWN_SECONDS, btn);
-                    } else {
+                    }).catch(err => {
+                        console.error('[suggest]', err);
+                        errEl.textContent = err.message || 'LLM error.'; errEl.style.display = 'block';
                         document.getElementById('ai-spinner').style.display = 'none';
                         btn.disabled = false; btn.textContent = 'Generate';
-                    }
+                    });
                 } catch (err) {
-                    const msg = err.name === 'AbortError'
-                        ? 'Request timed out (server took too long). Check Render logs for LLM errors.'
-                        : `Network error: ${err.message || err}`;
                     console.error('[suggest]', err);
-                    errEl.textContent = msg; errEl.style.display = 'block';
+                    errEl.textContent = `Network error: ${err.message || err}`; errEl.style.display = 'block';
                     btn.disabled = false; btn.textContent = 'Generate';
                     document.getElementById('ai-spinner').style.display = 'none';
-                } finally {
-                    clearTimeout(abortTimer);
                 }
             }
             {% endif %}
