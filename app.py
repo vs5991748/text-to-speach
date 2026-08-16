@@ -201,7 +201,13 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
-    content = data["choices"][0]["message"]["content"].strip()
+    print(f"[LLM] response keys: {list(data.keys())}", file=sys.stderr, flush=True)
+    raw_content = data["choices"][0]["message"].get("content")
+    if raw_content is None:
+        # Some models return None content (tool_calls or reasoning models) — log and raise
+        print(f"[LLM] null content in response: {json.dumps(data)[:500]}", file=sys.stderr, flush=True)
+        raise ValueError("LLM returned null content. Try a different model (e.g. google/gemma-2-9b-it:free).")
+    content = raw_content.strip()
     if "```" in content:
         content = re.sub(r"```(?:json)?", "", content).strip()
     m = re.search(r"\{[^}]+\}", content, re.DOTALL)
