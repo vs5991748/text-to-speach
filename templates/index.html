@@ -695,6 +695,11 @@
                     </div>
                     <span id="ai-error" class="hint" style="color:var(--red);display:none;margin-top:6px;display:block"></span>
                 </div>
+                {% else %}
+                <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:14px;opacity:.55">
+                    <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:4px">&#128274; AI phrase generator — unavailable</div>
+                    <p style="font-size:.82rem;color:var(--muted);margin:0">{{ llm_lock_reason }} See <a href="https://github.com/vs5991748/text-to-speach/blob/master/doc/llm.md" target="_blank" style="color:var(--accent)">doc/llm.md</a> for setup instructions.</p>
+                </div>
                 {% endif %}
 
                 <div id="manual-pairs-list"></div>

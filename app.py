@@ -229,6 +229,12 @@ def index():
                            known_voices=LANG_VOICES,
                            is_su=g.is_su,
                            llm_enabled=bool(_llm_config_for(g.username)),
+                           llm_lock_reason=(
+                               None if _llm_config_for(g.username)
+                               else ("No LLM provider is configured on this server."
+                                     if not LLM_DEFAULT
+                                     else "Your account is not assigned to a configured LLM provider.")
+                           ),
                            max_rows=MAX_ROWS,
                            max_rows_per_window=MAX_ROWS_PER_WINDOW,
                            max_string_length=MAX_STRING_LENGTH,
