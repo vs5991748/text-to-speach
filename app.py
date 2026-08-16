@@ -630,7 +630,7 @@ def suggest():
     word = str(data.get("word", "")).strip()
     learning_lang = str(data.get("learning_lang", "")).strip()
     translation_lang = str(data.get("translation_lang", "")).strip()
-    count = max(1, min(10, int(data.get("count", 1) or 1)))
+    count = max(1, min(5, int(data.get("count", 1) or 1)))
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
 

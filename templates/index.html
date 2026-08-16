@@ -778,8 +778,8 @@
                     <div style="display:flex;gap:8px;align-items:center">
                         <input type="text" id="ai-word" placeholder="word or collocation&hellip; e.g. commute, run fast"
                             style="flex:1" />
-                        <input type="number" id="ai-count" min="1" max="10" value="1"
-                            title="Number of pairs to generate" style="width:52px;padding:9px 6px;text-align:center" />
+                        <input type="number" id="ai-count" min="1" max="5" value="1"
+                            title="Number of pairs to generate (max 5)" style="width:52px;padding:9px 6px;text-align:center" />
                         <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;width:auto"
                             onclick="aiSuggest(this)">Generate</button>
                         <div id="ai-spinner"
@@ -1080,7 +1080,7 @@
             const word = document.getElementById('ai-word').value.trim();
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
             const translationLang = document.getElementById('manual-translation-lang').value.trim();
-            const count = Math.max(1, Math.min(10, parseInt(document.getElementById('ai-count').value) || 1));
+            const count = Math.max(1, Math.min(5, parseInt(document.getElementById('ai-count').value) || 1));
             const errEl = document.getElementById('ai-error');
             errEl.style.display = 'none';
             if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
