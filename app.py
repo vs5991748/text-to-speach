@@ -284,6 +284,10 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
                         parsed = [parsed]
                 if not parsed or "learning" not in parsed[0]:
                     raise ValueError("LLM response missing 'learning' field.")
+                # Reject template/placeholder responses — retry so the model gives real content
+                _placeholders = {"", "...", "<sentence>", "<sentence 1>", "<sentence 2>"}
+                if all(str(p.get("learning", "")).strip() in _placeholders for p in parsed):
+                    raise ValueError("LLM returned placeholder text. Retrying.")
                 return parsed
             except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
                 print(f"[LLM] attempt {attempt+1} parse error: {type(e).__name__}: {e} | raw: {str(data)[:300]}", file=sys.stderr, flush=True)
@@ -628,24 +632,25 @@ def suggest():
     with _suggest_jobs_lock:
         _suggest_jobs[suggest_id] = {"status": "pending", "pairs": None, "error": None}
 
-    # Record cooldown time now (optimistic); worker runs in background thread
-    if not g.is_su and LLM_SUGGEST_COOLDOWN:
-        with _last_suggest_time_lock:
-            _last_suggest_time[g.username or "_anon_"] = time.monotonic()
+    # user_key passed to worker so cooldown is recorded at completion, not at launch
+    user_key_for_cooldown = (g.username or "_anon_") if (not g.is_su and LLM_SUGGEST_COOLDOWN) else None
 
     threading.Thread(
         target=_run_suggest,
-        args=(suggest_id, cfg, word, learning_lang, translation_lang, count),
+        args=(suggest_id, cfg, word, learning_lang, translation_lang, count, user_key_for_cooldown),
         daemon=True,
     ).start()
     return jsonify({"suggest_id": suggest_id})
 
 
-def _run_suggest(suggest_id, cfg, word, learning_lang, translation_lang, count):
+def _run_suggest(suggest_id, cfg, word, learning_lang, translation_lang, count, user_key_for_cooldown):
     with _suggest_jobs_lock:
         _suggest_jobs[suggest_id]["status"] = "running"
     try:
         pairs = _call_llm(cfg, word, learning_lang, translation_lang, count)
+        if user_key_for_cooldown:
+            with _last_suggest_time_lock:
+                _last_suggest_time[user_key_for_cooldown] = time.monotonic()
         with _suggest_jobs_lock:
             _suggest_jobs[suggest_id]["status"] = "done"
             _suggest_jobs[suggest_id]["pairs"] = pairs
