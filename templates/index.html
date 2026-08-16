@@ -796,7 +796,18 @@
             </div>
 
             <div id="upload-error" class="alert alert-error" style="display:none;margin-top:12px"></div>
-        </div>
+
+            <div id="pairs-preview-source" style="display:none;margin-top:14px">
+                <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">
+                    Preview <span id="pairs-preview-source-count"></span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table id="pairs-preview-source-table" style="width:100%;border-collapse:collapse;font-size:.83rem">
+                        <thead id="pairs-preview-source-head"></thead>
+                        <tbody id="pairs-preview-source-body"></tbody>
+                    </table>
+                </div>
+            </div>
 
         <!-- Step 2: Configure -->
         <div class="card tab-panel-card" id="panel-options" style="display:none">
@@ -1116,20 +1127,22 @@
             populateLangSelect(result.langs);
             if (autoLearningLang) document.getElementById('learning-lang').value = autoLearningLang;
             if (autoNoTranslation) document.getElementById('no-translation').checked = true;
-            // Render pairs preview
+            // Render pairs preview (both Source and Configure panels)
             if (result.first_pairs && result.first_pairs.length) {
                 const langs = result.langs;
-                const head = document.getElementById('pairs-preview-head');
-                const body = document.getElementById('pairs-preview-body');
-                head.innerHTML = '<tr><th>#</th>' + langs.map(l => `<th>${l}</th>`).join('') + '</tr>';
-                body.innerHTML = result.first_pairs.map((p, i) =>
-                    `<tr><td style="color:var(--muted);width:2rem">${i + 1}</td>` +
-                    langs.map(l => `<td>${p[l] || ''}</td>`).join('') + '</tr>'
-                ).join('');
                 const total = result.count;
-                document.getElementById('pairs-preview-count').textContent =
-                    `(first ${result.first_pairs.length} of ${total} pair${total > 1 ? 's' : ''})`;
-                document.getElementById('pairs-preview').style.display = '';
+                const countLabel = `(first ${result.first_pairs.length} of ${total} pair${total > 1 ? 's' : ''})`;
+                function _buildPreview(headId, bodyId, countId, containerId) {
+                    document.getElementById(headId).innerHTML = '<tr><th>#</th>' + langs.map(l => `<th>${l}</th>`).join('') + '</tr>';
+                    document.getElementById(bodyId).innerHTML = result.first_pairs.map((p, i) =>
+                        `<tr><td style="color:var(--muted);width:2rem">${i + 1}</td>` +
+                        langs.map(l => `<td>${p[l] || ''}</td>`).join('') + '</tr>'
+                    ).join('');
+                    document.getElementById(countId).textContent = countLabel;
+                    document.getElementById(containerId).style.display = '';
+                }
+                _buildPreview('pairs-preview-head', 'pairs-preview-body', 'pairs-preview-count', 'pairs-preview');
+                _buildPreview('pairs-preview-source-head', 'pairs-preview-source-body', 'pairs-preview-source-count', 'pairs-preview-source');
             }
             _enablePageTab('options');
             switchPageTab('options');
@@ -1176,6 +1189,9 @@
             document.getElementById('pairs-preview').style.display = 'none';
             document.getElementById('pairs-preview-body').innerHTML = '';
             document.getElementById('pairs-preview-head').innerHTML = '';
+            document.getElementById('pairs-preview-source').style.display = 'none';
+            document.getElementById('pairs-preview-source-body').innerHTML = '';
+            document.getElementById('pairs-preview-source-head').innerHTML = '';
             _disablePageTab('options');
             _disablePageTab('result');
             switchPageTab('source');
