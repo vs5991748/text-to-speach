@@ -7,6 +7,7 @@ import os
 import re
 import secrets
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -171,6 +172,8 @@ ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -> dict:
     """Call an OpenAI-compatible LLM and return {learning, translation} pair."""
+    url = f"{cfg['base_url']}/v1/chat/completions"
+    print(f"[LLM] POST {url} model={cfg['model']} word={word!r}", file=sys.stderr, flush=True)
     trans_part = (
         f' Then translate the sentence into the language with code "{translation_lang}".'
         if translation_lang else ""
@@ -193,9 +196,9 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
     headers = {"Content-Type": "application/json"}
     if cfg["api_key"]:
         headers["Authorization"] = f"Bearer {cfg['api_key']}"
-    req = urllib.request.Request(
-        f"{cfg['base_url']}/v1/chat/completions", data=payload, headers=headers, method="POST"
-    )
+    else:
+        print(f"[LLM] WARNING: no API key set for {cfg['base_url']}", file=sys.stderr, flush=True)
+    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
     content = data["choices"][0]["message"]["content"].strip()
@@ -541,10 +544,20 @@ def suggest():
             with _last_suggest_time_lock:
                 _last_suggest_time[g.username or "_anon_"] = time.monotonic()
         return jsonify(result)
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode("utf-8", errors="replace")[:500]
+        except Exception:
+            pass
+        print(f"[LLM] HTTP {e.code} {e.reason} from {cfg['base_url']}: {body}", file=sys.stderr, flush=True)
+        return jsonify({"error": f"LLM returned HTTP {e.code} {e.reason}. Check Render logs."}), 502
     except urllib.error.URLError as e:
-        return jsonify({"error": f"Cannot reach LLM: {e.reason}"}), 502
+        print(f"[LLM] URLError: {e.reason}", file=sys.stderr, flush=True)
+        return jsonify({"error": f"Cannot reach LLM ({e.reason}). Check LLM_BASE_URL in config."}), 502
     except Exception as e:
-        return jsonify({"error": f"LLM error: {e}"}), 500
+        print(f"[LLM] Error: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        return jsonify({"error": f"LLM error ({type(e).__name__}): {e}"}), 500
 
 
 @app.route("/limits")
