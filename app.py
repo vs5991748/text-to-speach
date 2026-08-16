@@ -2,6 +2,7 @@
 """Flask web interface for the TTS audio generator."""
 
 import base64
+import json
 import os
 import re
 import secrets
@@ -9,6 +10,8 @@ import shutil
 import tempfile
 import threading
 import time
+import urllib.error
+import urllib.request
 import uuid
 import zipfile
 from pathlib import Path
@@ -35,6 +38,39 @@ RATE_LIMIT_REQUESTS = _limit("RATE_LIMIT_REQUESTS", 10)
 RATE_LIMIT_WINDOW = _limit("RATE_LIMIT_WINDOW_SECONDS", 60)
 GENERATION_TIMEOUT = _limit("GENERATION_TIMEOUT_SECONDS", 600)
 GENERATION_COOLDOWN = _limit("GENERATION_COOLDOWN_SECONDS", 60)
+
+# Default provider name for all users (overridable per-user via LLM_USER_<USERNAME>)
+LLM_DEFAULT = os.getenv("LLM_DEFAULT", "openrouter").strip().lower()
+
+# Built-in base URLs; override with LLM_<PROVIDER>_BASE_URL
+_LLM_DEFAULT_URLS = {
+    "openrouter": "https://openrouter.ai/api",
+    "groq": "https://api.groq.com/openai",
+    "ollama": "http://localhost:11434",
+}
+_LLM_DEFAULT_MODELS = {
+    "openrouter": "meta-llama/llama-3.1-8b-instruct:free",
+    "groq": "llama-3.1-8b-instant",
+    "ollama": "llama3.2",
+}
+
+
+def _llm_config_for(username) -> Optional[dict]:
+    """Return {model, api_key, base_url} for the user's assigned provider, or None."""
+    provider = ""
+    if username:
+        provider = os.getenv(f"LLM_USER_{username.upper()}", "").strip().lower()
+    if not provider:
+        provider = LLM_DEFAULT
+    if not provider:
+        return None
+    prefix = f"LLM_{provider.upper()}"
+    model = os.getenv(f"{prefix}_MODEL", _LLM_DEFAULT_MODELS.get(provider, "")).strip()
+    api_key = os.getenv(f"{prefix}_API_KEY", "").strip()
+    base_url = os.getenv(f"{prefix}_BASE_URL", _LLM_DEFAULT_URLS.get(provider, "")).rstrip("/")
+    if not model or not base_url:
+        return None
+    return {"model": model, "api_key": api_key, "base_url": base_url}
 
 
 def _parse_users(env_var: str, is_su: bool) -> dict:
@@ -116,6 +152,42 @@ _last_gen_time_lock = threading.Lock()
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
+def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -> dict:
+    """Call an OpenAI-compatible LLM and return {learning, translation} pair."""
+    trans_part = (
+        f' Then translate the sentence into the language with code "{translation_lang}".'
+        if translation_lang else ""
+    )
+    trans_field = ', "translation": "<translation>"' if translation_lang else ""
+    prompt = (
+        f'You are a language learning assistant. '
+        f'Write one short, natural, everyday sentence in the language with code "{learning_lang}" '
+        f'that uses or illustrates the word or phrase "{word}".'
+        f'{trans_part} '
+        f'Respond with ONLY valid JSON, no extra text: '
+        f'{{"learning": "<sentence>"{trans_field}}}'
+    )
+    payload = json.dumps({
+        "model": cfg["model"],
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.8,
+        "max_tokens": 150,
+    }).encode()
+    headers = {"Content-Type": "application/json"}
+    if cfg["api_key"]:
+        headers["Authorization"] = f"Bearer {cfg['api_key']}"
+    req = urllib.request.Request(
+        f"{cfg['base_url']}/v1/chat/completions", data=payload, headers=headers, method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read())
+    content = data["choices"][0]["message"]["content"].strip()
+    if "```" in content:
+        content = re.sub(r"```(?:json)?", "", content).strip()
+    m = re.search(r"\{[^}]+\}", content, re.DOTALL)
+    return json.loads(m.group() if m else content)
+
+
 def _is_rate_limited(username: str) -> bool:
     if not RATE_LIMIT_REQUESTS:
         return False
@@ -156,6 +228,7 @@ def index():
                            known_langs=sorted(LANG_VOICES.keys()),
                            known_voices=LANG_VOICES,
                            is_su=g.is_su,
+                           llm_enabled=bool(_llm_config_for(g.username)),
                            max_rows=MAX_ROWS,
                            max_rows_per_window=MAX_ROWS_PER_WINDOW,
                            max_string_length=MAX_STRING_LENGTH,
@@ -412,6 +485,30 @@ def status(job_id):
     if not job:
         return jsonify({"error": "Unknown job ID."}), 404
     return jsonify({"status": job["status"], "error": job.get("error"), "format": job.get("format")})
+
+
+@app.route("/suggest", methods=["POST"])
+def suggest():
+    cfg = _llm_config_for(g.username)
+    if not cfg:
+        return jsonify({"error": "AI suggestions are not configured for your account."}), 503
+    if not g.is_su and _is_rate_limited(g.username):
+        return jsonify({"error": "Rate limit exceeded."}), 429
+    data = request.get_json(silent=True) or {}
+    word = str(data.get("word", "")).strip()
+    learning_lang = str(data.get("learning_lang", "")).strip()
+    translation_lang = str(data.get("translation_lang", "")).strip()
+    if not word or not learning_lang:
+        return jsonify({"error": "word and learning_lang are required."}), 400
+    try:
+        result = _call_llm(cfg, word, learning_lang, translation_lang)
+        if "learning" not in result:
+            raise ValueError("LLM response missing 'learning' field.")
+        return jsonify(result)
+    except urllib.error.URLError as e:
+        return jsonify({"error": f"Cannot reach LLM: {e.reason}"}), 502
+    except Exception as e:
+        return jsonify({"error": f"LLM error: {e}"}), 500
 
 
 @app.route("/limits")
