@@ -600,6 +600,17 @@
             color: var(--accent);
             border-color: var(--accent);
         }
+
+        /* Page-level step tabs */
+        .page-tab-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; }
+        .page-tab { padding: 13px 8px; border: none; cursor: pointer; font-size: .88rem; font-weight: 600; background: none; color: var(--muted); transition: color .15s, background .15s; border-right: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .page-tab:last-child { border-right: none; }
+        .page-tab.active { color: var(--text); background: var(--surface2); }
+        .page-tab:disabled { opacity: .38; cursor: not-allowed; }
+        .page-tab:not(:disabled):not(.active):hover { color: var(--text); background: var(--surface2); opacity: .8; }
+        .ptab-num { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-dim); border: 1.5px solid var(--accent); color: var(--accent); font-size: .72rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .page-tab.active .ptab-num { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .tab-panel-card { border-radius: 0 0 var(--radius) var(--radius) !important; border-top: none !important; }
     </style>
 </head>
 
@@ -622,12 +633,20 @@
 
     <div class="container">
 
+        <div class="page-tab-bar">
+            <button class="page-tab active" id="ptab-source" onclick="switchPageTab('source')">
+                <span class="ptab-num">1</span> Source
+            </button>
+            <button class="page-tab" id="ptab-options" disabled onclick="switchPageTab('options')">
+                <span class="ptab-num">2</span> Configure
+            </button>
+            <button class="page-tab" id="ptab-result" disabled onclick="switchPageTab('result')">
+                <span class="ptab-num">3</span> Result
+            </button>
+        </div>
+
         <!-- Step 1: Upload / Enter sentences -->
-        <div class="card active" id="card-upload">
-            <div class="card-header">
-                <div class="step-badge">1</div>
-                <h2>Source</h2>
-            </div>
+        <div class="card tab-panel-card" id="panel-source">
 
             <div class="tab-bar">
                 <button class="tab-btn" id="tab-file" onclick="switchTab('file')">&#128196; Upload file</button>
@@ -688,11 +707,7 @@
         </div>
 
         <!-- Step 2: Configure -->
-        <div class="card disabled" id="card-options">
-            <div class="card-header">
-                <div class="step-badge">2</div>
-                <h2>Configure options</h2>
-            </div>
+        <div class="card tab-panel-card" id="panel-options" style="display:none">
 
             <div class="field">
                 <label for="learning-lang">Learning language <span class="required">*</span></label>
@@ -777,11 +792,7 @@
         </div>
 
         <!-- Step 3: Status / Download -->
-        <div class="card" id="status-card">
-            <div class="card-header">
-                <div class="step-badge">3</div>
-                <h2>Result</h2>
-            </div>
+        <div class="card tab-panel-card" id="panel-result" style="display:none">
 
             <div id="status-running" style="display:none">
                 <div class="status-indicator">
@@ -828,6 +839,16 @@
         let detectedLangs = [];
         let pollingTimer = null;
         let activeTab = 'manual';
+
+        // ── Page tab navigation ────────────────────────────────
+        function switchPageTab(name) {
+            ['source', 'options', 'result'].forEach(t => {
+                document.getElementById('ptab-' + t).classList.toggle('active', t === name);
+                document.getElementById('panel-' + t).style.display = t === name ? '' : 'none';
+            });
+        }
+        function _enablePageTab(name) { document.getElementById('ptab-' + name).disabled = false; }
+        function _disablePageTab(name) { document.getElementById('ptab-' + name).disabled = true; }
 
         // Seed lang code fields from localStorage, falling back to sensible defaults
         document.getElementById('manual-learning-lang').value =
@@ -925,9 +946,8 @@
             populateLangSelect(result.langs);
             if (autoLearningLang) document.getElementById('learning-lang').value = autoLearningLang;
             if (autoNoTranslation) document.getElementById('no-translation').checked = true;
-            document.getElementById('card-options').classList.remove('disabled');
-            document.getElementById('card-upload').classList.remove('active');
-            document.getElementById('card-options').classList.add('active');
+            _enablePageTab('options');
+            switchPageTab('options');
         }
 
         // ── Drop zone ──────────────────────────────────────────
@@ -968,8 +988,9 @@
             } else {
                 document.getElementById('manual-panel').style.display = '';
             }
-            document.getElementById('card-options').classList.add('disabled');
-            document.getElementById('card-upload').classList.add('active');
+            _disablePageTab('options');
+            _disablePageTab('result');
+            switchPageTab('source');
             showUploadError('');
         }
 
@@ -1081,12 +1102,11 @@
                 voice_overrides: collectVoiceOverrides(),
             };
 
-            const statusCard = document.getElementById('status-card');
-            statusCard.style.display = 'block';
+            _enablePageTab('result');
+            switchPageTab('result');
             document.getElementById('status-running').style.display = 'block';
             document.getElementById('status-done').style.display = 'none';
             document.getElementById('status-error').style.display = 'none';
-            statusCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             let jobId;
             try {
@@ -1147,11 +1167,14 @@
 
         function resetAll() {
             clearInterval(pollingTimer);
-            document.getElementById('status-card').style.display = 'none';
             document.getElementById('status-running').style.display = 'none';
             document.getElementById('status-done').style.display = 'none';
             document.getElementById('status-error').style.display = 'none';
             document.getElementById('generate-btn').disabled = false;
+            document.getElementById('generate-btn-label').textContent = 'Generate audio';
+            _disablePageTab('options');
+            _disablePageTab('result');
+            switchPageTab('source');
             document.getElementById('voice-overrides-list').innerHTML = '';
             document.getElementById('rows').value = '';
             document.getElementById('manual-pairs-list').innerHTML = '';
