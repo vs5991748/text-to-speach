@@ -44,6 +44,7 @@ LLM_SUGGEST_COOLDOWN = _limit("LLM_SUGGEST_COOLDOWN_SECONDS", 60)
 # Default provider for all users; SU users can get a separate default
 LLM_DEFAULT = os.getenv("LLM_DEFAULT", "openrouter").strip().lower()
 LLM_SU_DEFAULT = os.getenv("LLM_SU_DEFAULT", "").strip().lower()
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", 600) or 600)
 
 # Built-in base URLs; override with LLM_<PROVIDER>_BASE_URL
 _LLM_DEFAULT_URLS = {
@@ -191,7 +192,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
         "model": cfg["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.8,
-        "max_tokens": 600,
+        "max_tokens": LLM_MAX_TOKENS,
     }).encode()
     headers = {"Content-Type": "application/json"}
     if cfg["api_key"]:
