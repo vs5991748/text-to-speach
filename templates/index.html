@@ -602,10 +602,29 @@
         }
 
         /* Pairs preview table */
-        #pairs-preview-table th, #pairs-preview-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-        #pairs-preview-table th { color: var(--muted); font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; background: var(--surface2); }
-        #pairs-preview-table td { color: var(--text); }
-        #pairs-preview-table tr:last-child td { border-bottom: none; }
+        #pairs-preview-table th,
+        #pairs-preview-table td {
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #pairs-preview-table th {
+            color: var(--muted);
+            font-size: .78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            background: var(--surface2);
+        }
+
+        #pairs-preview-table td {
+            color: var(--text);
+        }
+
+        #pairs-preview-table tr:last-child td {
+            border-bottom: none;
+        }
 
         /* Page-level step tabs */
         .page-tab-bar {
@@ -756,11 +775,14 @@
                     style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
                     <div style="font-size:.8rem;color:var(--accent);font-weight:600;margin-bottom:8px">&#10024; AI
                         phrase generator</div>
-                    <div style="display:flex;gap:8px">
+                    <div style="display:flex;gap:8px;align-items:center">
                         <input type="text" id="ai-word" placeholder="word or collocation&hellip; e.g. commute, run fast"
                             style="flex:1" />
                         <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;width:auto"
                             onclick="aiSuggest(this)">Generate</button>
+                        <div id="ai-spinner"
+                            style="display:none;width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0">
+                        </div>
                     </div>
                     <span id="ai-error" class="hint"
                         style="color:var(--red);display:none;margin-top:6px;display:block"></span>
@@ -809,666 +831,675 @@
                 </div>
             </div>
 
-        <!-- Step 2: Configure -->
-        <div class="card tab-panel-card" id="panel-options" style="display:none">
+            <!-- Step 2: Configure -->
+            <div class="card tab-panel-card" id="panel-options" style="display:none">
 
-            <div class="field">
-                <label for="learning-lang">Learning language <span class="required">*</span></label>
-                <select id="learning-lang">
-                    <option value="">— detected after upload —</option>
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="target-speeds">Target speeds</label>
-                <input type="text" id="target-speeds" value="0.85" placeholder="e.g. 0.7 0.85 1.0" />
-                <span class="hint">1–3 space-separated multipliers, each between 0.5 and 3.0. Each value = one
-                    repetition (1.0 = normal).</span>
-                <span class="hint" id="err-target-speeds" style="color:var(--red);display:none"></span>
-            </div>
-
-            <div class="field">
-                <label for="rows">Row range <span class="hint" style="font-weight:400">(optional)</span></label>
-                <input type="text" id="rows" placeholder="e.g. 10 · 2:5 · -2" />
-                <span class="hint">Limit which pairs are processed: <code>N</code> = first N, <code>M:N</code> = rows M
-                    to N (1-based), <code>-N</code> = last N. Leave blank for all rows.</span>
-            </div>
-
-            <div class="row">
                 <div class="field">
-                    <label for="pause-target">Pause after target (s)</label>
-                    <input type="number" id="pause-target" value="1.0" min="0" max="3" step="0.5" />
-                    <span class="hint" id="err-pause-target" style="color:var(--red);display:none"></span>
+                    <label for="learning-lang">Learning language <span class="required">*</span></label>
+                    <select id="learning-lang">
+                        <option value="">— detected after upload —</option>
+                    </select>
                 </div>
+
                 <div class="field">
-                    <label for="pause-translation">Pause after translation (s)</label>
-                    <input type="number" id="pause-translation" value="1.5" min="0" max="3" step="0.5" />
-                    <span class="hint" id="err-pause-translation" style="color:var(--red);display:none"></span>
+                    <label for="target-speeds">Target speeds</label>
+                    <input type="text" id="target-speeds" value="0.85" placeholder="e.g. 0.7 0.85 1.0" />
+                    <span class="hint">1–3 space-separated multipliers, each between 0.5 and 3.0. Each value = one
+                        repetition (1.0 = normal).</span>
+                    <span class="hint" id="err-target-speeds" style="color:var(--red);display:none"></span>
                 </div>
-            </div>
 
-            <div class="field">
-                <div class="toggle-row">
-                    <label for="no-translation">Skip translation audio</label>
-                    <label class="toggle">
-                        <input type="checkbox" id="no-translation" />
-                        <span class="toggle-slider"></span>
-                    </label>
+                <div class="field">
+                    <label for="rows">Row range <span class="hint" style="font-weight:400">(optional)</span></label>
+                    <input type="text" id="rows" placeholder="e.g. 10 · 2:5 · -2" />
+                    <span class="hint">Limit which pairs are processed: <code>N</code> = first N, <code>M:N</code> =
+                        rows M
+                        to N (1-based), <code>-N</code> = last N. Leave blank for all rows.</span>
                 </div>
-            </div>
 
-            <div class="field">
-                <div class="toggle-row">
-                    <label for="split-mode" style="display:flex;flex-direction:column;gap:2px">
-                        One file per record
-                        <span class="hint" style="font-weight:400">Download a ZIP with a separate MP3 per sentence pair
-                            instead of one combined track.</span>
-                    </label>
-                    <label class="toggle">
-                        <input type="checkbox" id="split-mode" />
-                        <span class="toggle-slider"></span>
-                    </label>
+                <div class="row">
+                    <div class="field">
+                        <label for="pause-target">Pause after target (s)</label>
+                        <input type="number" id="pause-target" value="1.0" min="0" max="3" step="0.5" />
+                        <span class="hint" id="err-pause-target" style="color:var(--red);display:none"></span>
+                    </div>
+                    <div class="field">
+                        <label for="pause-translation">Pause after translation (s)</label>
+                        <input type="number" id="pause-translation" value="1.5" min="0" max="3" step="0.5" />
+                        <span class="hint" id="err-pause-translation" style="color:var(--red);display:none"></span>
+                    </div>
                 </div>
-            </div>
 
-            <hr class="sep" />
-
-            <div class="field">
-                <label>Voice overrides <span class="hint" style="font-weight:400">(optional — override default voices
-                        per language)</span></label>
-                <div id="voice-overrides-list"></div>
-                <button id="add-voice-btn" onclick="addVoiceRow()">+ Add voice override</button>
-                <span class="hint" style="margin-top:4px">Format: language → custom voice ID. Run
-                    <code>edge-tts --list-voices</code> to browse available voices.</span>
-            </div>
-
-            <hr class="sep" />
-
-            <button class="btn btn-primary" id="generate-btn" onclick="startGeneration()">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-                    <path fill-rule="evenodd"
-                        d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z"
-                        clip-rule="evenodd" />
-                </svg>
-                <span id="generate-btn-label">Generate audio</span>
-            </button>
-
-            <div id="pairs-preview" style="display:none;margin-top:18px">
-                <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">
-                    Preview <span id="pairs-preview-count"></span>
+                <div class="field">
+                    <div class="toggle-row">
+                        <label for="no-translation">Skip translation audio</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="no-translation" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <div style="overflow-x:auto">
-                    <table id="pairs-preview-table" style="width:100%;border-collapse:collapse;font-size:.83rem">
-                        <thead id="pairs-preview-head"></thead>
-                        <tbody id="pairs-preview-body"></tbody>
-                    </table>
+
+                <div class="field">
+                    <div class="toggle-row">
+                        <label for="split-mode" style="display:flex;flex-direction:column;gap:2px">
+                            One file per record
+                            <span class="hint" style="font-weight:400">Download a ZIP with a separate MP3 per sentence
+                                pair
+                                instead of one combined track.</span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="split-mode" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Step 3: Status / Download -->
-        <div class="card tab-panel-card" id="panel-result" style="display:none">
+                <hr class="sep" />
 
-            <div id="status-running" style="display:none">
-                <div class="status-indicator">
-                    <div class="spinner"></div>
-                    <div class="status-text">
-                        Generating audio…
-                        <small>This may take a while depending on file size. Do not close the tab.</small>
+                <div class="field">
+                    <label>Voice overrides <span class="hint" style="font-weight:400">(optional — override default
+                            voices
+                            per language)</span></label>
+                    <div id="voice-overrides-list"></div>
+                    <button id="add-voice-btn" onclick="addVoiceRow()">+ Add voice override</button>
+                    <span class="hint" style="margin-top:4px">Format: language → custom voice ID. Run
+                        <code>edge-tts --list-voices</code> to browse available voices.</span>
+                </div>
+
+                <hr class="sep" />
+
+                <button class="btn btn-primary" id="generate-btn" onclick="startGeneration()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18"
+                        height="18">
+                        <path fill-rule="evenodd"
+                            d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span id="generate-btn-label">Generate audio</span>
+                </button>
+
+                <div id="pairs-preview" style="display:none;margin-top:18px">
+                    <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">
+                        Preview <span id="pairs-preview-count"></span>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table id="pairs-preview-table" style="width:100%;border-collapse:collapse;font-size:.83rem">
+                            <thead id="pairs-preview-head"></thead>
+                            <tbody id="pairs-preview-body"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <div id="status-error" class="alert alert-error" style="display:none"></div>
+            <!-- Step 3: Status / Download -->
+            <div class="card tab-panel-card" id="panel-result" style="display:none">
 
-            <div id="status-done" style="display:none">
-                <div class="alert alert-success" style="margin-bottom:14px">
-                    Audio generated successfully!
+                <div id="status-running" style="display:none">
+                    <div class="status-indicator">
+                        <div class="spinner"></div>
+                        <div class="status-text">
+                            Generating audio…
+                            <small>This may take a while depending on file size. Do not close the tab.</small>
+                        </div>
+                    </div>
                 </div>
-                <a id="download-link" href="#" class="btn btn-success" download>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18"
-                        height="18">
-                        <path
-                            d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                        <path
-                            d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-                    </svg>
-                    <span id="download-label">Download</span>
-                </a>
-                <button class="btn btn-primary"
-                    style="margin-top:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-                    onclick="resetAll()">
-                    Start over
-                </button>
+
+                <div id="status-error" class="alert alert-error" style="display:none"></div>
+
+                <div id="status-done" style="display:none">
+                    <div class="alert alert-success" style="margin-bottom:14px">
+                        Audio generated successfully!
+                    </div>
+                    <a id="download-link" href="#" class="btn btn-success" download>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18"
+                            height="18">
+                            <path
+                                d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                            <path
+                                d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                        </svg>
+                        <span id="download-label">Download</span>
+                    </a>
+                    <button class="btn btn-primary"
+                        style="margin-top:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+                        onclick="resetAll()">
+                        Start over
+                    </button>
+                </div>
             </div>
+
         </div>
 
-    </div>
+        <script>
+            const MAX_ROWS = {{ max_rows }};
+            const MAX_STRING_LENGTH = {{ max_string_length }};
+            const IS_SU = {{ 'true' if is_su else 'false' }};
+            const COOLDOWN_SECONDS = {{ cooldown_seconds }};
+            const SUGGEST_COOLDOWN_SECONDS = {{ llm_suggest_cooldown }};
+            let fileId = null;
+            let detectedLangs = [];
+            let pollingTimer = null;
+            let activeTab = 'manual';
 
-    <script>
-        const MAX_ROWS = {{ max_rows }};
-        const MAX_STRING_LENGTH = {{ max_string_length }};
-        const IS_SU = {{ 'true' if is_su else 'false' }};
-        const COOLDOWN_SECONDS = {{ cooldown_seconds }};
-        const SUGGEST_COOLDOWN_SECONDS = {{ llm_suggest_cooldown }};
-        let fileId = null;
-        let detectedLangs = [];
-        let pollingTimer = null;
-        let activeTab = 'manual';
-
-        // ── Page tab navigation ────────────────────────────────
-        function switchPageTab(name) {
-            ['source', 'options', 'result'].forEach(t => {
-                document.getElementById('ptab-' + t).classList.toggle('active', t === name);
-                document.getElementById('panel-' + t).style.display = t === name ? '' : 'none';
-            });
-        }
-        function _enablePageTab(name) { document.getElementById('ptab-' + name).disabled = false; }
-        function _disablePageTab(name) { document.getElementById('ptab-' + name).disabled = true; }
-
-        // Seed lang code fields from localStorage, falling back to sensible defaults
-        document.getElementById('manual-learning-lang').value =
-            localStorage.getItem('tts_learning_lang') ?? 'en';
-        document.getElementById('manual-translation-lang').value =
-            localStorage.getItem('tts_translation_lang') ?? 'uk';
-
-        // Show manual panel by default
-        switchTab('manual');
-
-        // ── Tab switcher ───────────────────────────────────────
-        function switchTab(mode) {
-            activeTab = mode;
-            document.getElementById('tab-file').classList.toggle('active', mode === 'file');
-            document.getElementById('tab-manual').classList.toggle('active', mode === 'manual');
-            document.getElementById('file-panel').style.display = mode === 'file' ? '' : 'none';
-            document.getElementById('manual-panel').style.display = mode === 'manual' ? '' : 'none';
-            showUploadError('');
-            if (mode === 'manual' && document.querySelectorAll('.manual-pair-row').length === 0) {
-                addManualRow();
-            }
-        }
-
-        // ── Manual entry ───────────────────────────────────────
-        function updateManualTranslationVisibility() {
-            const hasTransLang = document.getElementById('manual-translation-lang').value.trim() !== '';
-            document.querySelectorAll('.manual-pair-row').forEach(row => {
-                const tInput = row.querySelector('.manual-translation');
-                if (tInput) tInput.style.display = hasTransLang ? '' : 'none';
-            });
-        }
-
-        function addManualRow() {
-            const hasTransLang = document.getElementById('manual-translation-lang').value.trim() !== '';
-            const row = document.createElement('div');
-            row.className = 'manual-pair-row';
-            const lInput = document.createElement('input');
-            lInput.type = 'text'; lInput.className = 'manual-learning';
-            lInput.placeholder = 'Learning language text';
-            const tInput = document.createElement('input');
-            tInput.type = 'text'; tInput.className = 'manual-translation';
-            tInput.placeholder = 'Translation (optional)';
-            tInput.style.display = hasTransLang ? '' : 'none';
-            const removeBtn = document.createElement('button');
-            removeBtn.textContent = '\u00d7'; removeBtn.title = 'Remove';
-            removeBtn.onclick = () => row.remove();
-            row.appendChild(lInput); row.appendChild(tInput); row.appendChild(removeBtn);
-            document.getElementById('manual-pairs-list').appendChild(row);
-            lInput.focus();
-        }
-
-        {% if llm_enabled %}
-        let _suggestTimer = null;
-        function _startSuggestTimer(seconds, btn) {
-            if (_suggestTimer) clearInterval(_suggestTimer);
-            let rem = seconds;
-            btn.disabled = true; btn.textContent = `Wait ${rem}s`;
-            _suggestTimer = setInterval(() => {
-                rem--;
-                if (rem <= 0) { clearInterval(_suggestTimer); btn.disabled = false; btn.textContent = 'Generate'; }
-                else { btn.textContent = `Wait ${rem}s`; }
-            }, 1000);
-        }
-        // Restore suggest cooldown on page load
-        if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
-            const lastS = parseInt(localStorage.getItem('tts_last_suggest') || '0', 10);
-            const remS = SUGGEST_COOLDOWN_SECONDS - Math.floor((Date.now() - lastS) / 1000);
-            if (remS > 0) {
-                const btn = document.querySelector('[onclick="aiSuggest(this)"]');
-                if (btn) _startSuggestTimer(remS, btn);
-            }
-        }
-
-        async function aiSuggest(btn) {
-            const word = document.getElementById('ai-word').value.trim();
-            const learningLang = document.getElementById('manual-learning-lang').value.trim();
-            const translationLang = document.getElementById('manual-translation-lang').value.trim();
-            const errEl = document.getElementById('ai-error');
-            errEl.style.display = 'none';
-            if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
-            if (!learningLang) { errEl.textContent = 'Set the learning language code first.'; errEl.style.display = 'block'; return; }
-            btn.disabled = true; btn.textContent = '…';
-            try {
-                const res = await fetch('/suggest', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang }),
+            // ── Page tab navigation ────────────────────────────────
+            function switchPageTab(name) {
+                ['source', 'options', 'result'].forEach(t => {
+                    document.getElementById('ptab-' + t).classList.toggle('active', t === name);
+                    document.getElementById('panel-' + t).style.display = t === name ? '' : 'none';
                 });
-                const data = await res.json();
-                if (!res.ok) {
-                    errEl.textContent = data.error || 'Failed.';
-                    errEl.style.display = 'block';
-                    btn.disabled = false; btn.textContent = 'Generate';
-                    return;
+            }
+            function _enablePageTab(name) { document.getElementById('ptab-' + name).disabled = false; }
+            function _disablePageTab(name) { document.getElementById('ptab-' + name).disabled = true; }
+
+            // Seed lang code fields from localStorage, falling back to sensible defaults
+            document.getElementById('manual-learning-lang').value =
+                localStorage.getItem('tts_learning_lang') ?? 'en';
+            document.getElementById('manual-translation-lang').value =
+                localStorage.getItem('tts_translation_lang') ?? 'uk';
+
+            // Show manual panel by default
+            switchTab('manual');
+
+            // ── Tab switcher ───────────────────────────────────────
+            function switchTab(mode) {
+                activeTab = mode;
+                document.getElementById('tab-file').classList.toggle('active', mode === 'file');
+                document.getElementById('tab-manual').classList.toggle('active', mode === 'manual');
+                document.getElementById('file-panel').style.display = mode === 'file' ? '' : 'none';
+                document.getElementById('manual-panel').style.display = mode === 'manual' ? '' : 'none';
+                showUploadError('');
+                if (mode === 'manual' && document.querySelectorAll('.manual-pair-row').length === 0) {
+                    addManualRow();
                 }
-                addManualRow();
-                const rows = document.querySelectorAll('.manual-pair-row');
-                const last = rows[rows.length - 1];
-                last.querySelector('.manual-learning').value = data.learning || '';
-                if (data.translation) last.querySelector('.manual-translation').value = data.translation;
-                document.getElementById('ai-word').value = '';
-                if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
-                    localStorage.setItem('tts_last_suggest', Date.now());
-                    _startSuggestTimer(SUGGEST_COOLDOWN_SECONDS, btn);
-                } else {
-                    btn.disabled = false; btn.textContent = 'Generate';
-                }
-                // Auto-advance to Configure after a phrase is ready
-                await submitManual();
-            } catch {
-                errEl.textContent = 'Network error.'; errEl.style.display = 'block';
-                btn.disabled = false; btn.textContent = 'Generate';
-            }
-        }
-        {% endif %}
-
-        async function submitManual() {
-            showUploadError('');
-            const langRe = /^[a-zA-Z]{2,10}$/;
-            const learningLang = document.getElementById('manual-learning-lang').value.trim();
-            if (!learningLang) { showUploadError('Learning language code is required.'); return; }
-            if (!langRe.test(learningLang)) { showUploadError(`Invalid learning language code "${learningLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
-            const translationLang = document.getElementById('manual-translation-lang').value.trim();
-            if (translationLang && !langRe.test(translationLang)) { showUploadError(`Invalid translation language code "${translationLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
-            const effectiveTransLang = translationLang || '_';
-            const pairs = [];
-            document.querySelectorAll('.manual-pair-row').forEach(row => {
-                const lText = row.querySelector('.manual-learning').value.trim();
-                if (!lText) return;
-                const tText = translationLang ? row.querySelector('.manual-translation').value.trim() : '';
-                pairs.push({ [learningLang]: lText, [effectiveTransLang]: tText });
-            });
-            if (!pairs.length) { showUploadError('Enter at least one sentence.'); return; }
-            const blob = new Blob([JSON.stringify(pairs)], { type: 'application/json' });
-            const file = new File([blob], 'manual-input.json', { type: 'application/json' });
-            const formData = new FormData();
-            formData.append('file', file);
-            const meta = `${pairs.length} pair${pairs.length > 1 ? 's' : ''} · ${learningLang}${translationLang ? ' / ' + translationLang : ' (no translation)'}`;
-            await _doUpload(formData, `${pairs.length} sentence pair${pairs.length > 1 ? 's' : ''} (manual)`, meta, learningLang, !translationLang);
-        }
-
-        // ── Shared upload handler ──────────────────────────────
-        async function _doUpload(formData, displayName, metaHint, autoLearningLang, autoNoTranslation) {
-            let result;
-            try {
-                const res = await fetch('/upload', { method: 'POST', body: formData });
-                result = await res.json();
-                if (!res.ok) { showUploadError(result.error || 'Upload failed.'); return; }
-            } catch { showUploadError('Network error during upload.'); return; }
-
-            fileId = result.file_id;
-            detectedLangs = result.langs;
-            const capped = result.count >= MAX_ROWS ? ` (capped at ${MAX_ROWS})` : '';
-            document.getElementById('file-name-label').textContent = displayName;
-            document.getElementById('file-meta-label').textContent =
-                metaHint || `${result.count} pairs${capped} · ${result.langs.join(' / ')}`;
-            document.getElementById('file-info').style.display = 'flex';
-            document.getElementById('drop-zone').style.display = 'none';
-            document.getElementById('manual-panel').style.display = 'none';
-            populateLangSelect(result.langs);
-            if (autoLearningLang) document.getElementById('learning-lang').value = autoLearningLang;
-            if (autoNoTranslation) document.getElementById('no-translation').checked = true;
-            // Render pairs preview (both Source and Configure panels)
-            if (result.first_pairs && result.first_pairs.length) {
-                const langs = result.langs;
-                const total = result.count;
-                const countLabel = `(first ${result.first_pairs.length} of ${total} pair${total > 1 ? 's' : ''})`;
-                function _buildPreview(headId, bodyId, countId, containerId) {
-                    document.getElementById(headId).innerHTML = '<tr><th>#</th>' + langs.map(l => `<th>${l}</th>`).join('') + '</tr>';
-                    document.getElementById(bodyId).innerHTML = result.first_pairs.map((p, i) =>
-                        `<tr><td style="color:var(--muted);width:2rem">${i + 1}</td>` +
-                        langs.map(l => `<td>${p[l] || ''}</td>`).join('') + '</tr>'
-                    ).join('');
-                    document.getElementById(countId).textContent = countLabel;
-                    document.getElementById(containerId).style.display = '';
-                }
-                _buildPreview('pairs-preview-head', 'pairs-preview-body', 'pairs-preview-count', 'pairs-preview');
-                _buildPreview('pairs-preview-source-head', 'pairs-preview-source-body', 'pairs-preview-source-count', 'pairs-preview-source');
-            }
-            _enablePageTab('options');
-            switchPageTab('options');
-        }
-
-        // ── Drop zone ──────────────────────────────────────────
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-
-        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-        });
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
-
-        async function handleFile(file) {
-            showUploadError('');
-            const formData = new FormData();
-            formData.append('file', file);
-            await _doUpload(formData, file.name, null, null, false);
-        }
-
-        function showUploadError(msg) {
-            const el = document.getElementById('upload-error');
-            el.textContent = msg;
-            el.style.display = msg ? 'block' : 'none';
-        }
-
-        function resetUpload() {
-            fileId = null;
-            detectedLangs = [];
-            fileInput.value = '';
-            document.getElementById('file-info').style.display = 'none';
-            // restore whichever panel was active
-            if (activeTab === 'file') {
-                document.getElementById('drop-zone').style.display = 'block';
-            } else {
-                document.getElementById('manual-panel').style.display = '';
-            }
-            document.getElementById('pairs-preview').style.display = 'none';
-            document.getElementById('pairs-preview-body').innerHTML = '';
-            document.getElementById('pairs-preview-head').innerHTML = '';
-            document.getElementById('pairs-preview-source').style.display = 'none';
-            document.getElementById('pairs-preview-source-body').innerHTML = '';
-            document.getElementById('pairs-preview-source-head').innerHTML = '';
-            _disablePageTab('options');
-            _disablePageTab('result');
-            switchPageTab('source');
-            showUploadError('');
-        }
-
-        // ── Language select ────────────────────────────────────
-        function populateLangSelect(langs) {
-            const sel = document.getElementById('learning-lang');
-            sel.innerHTML = '';
-            langs.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l;
-                opt.textContent = l;
-                sel.appendChild(opt);
-            });
-        }
-
-        // ── Voice overrides ────────────────────────────────────
-        const knownLangs = {{ known_langs | tojson }};
-        const knownVoices = {{ known_voices | tojson }};
-
-        function addVoiceRow(lang = '', voice = '') {
-            const list = document.getElementById('voice-overrides-list');
-            const row = document.createElement('div');
-            row.className = 'voice-override-row';
-
-            const langSel = document.createElement('select');
-            langSel.innerHTML = '<option value="">— lang —</option>';
-            knownLangs.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l; opt.textContent = l;
-                if (l === lang) opt.selected = true;
-                langSel.appendChild(opt);
-            });
-
-            const voiceInput = document.createElement('input');
-            voiceInput.type = 'text';
-            voiceInput.placeholder = 'e.g. en-US-GuyNeural';
-            voiceInput.value = voice;
-
-            langSel.addEventListener('change', () => {
-                if (knownVoices[langSel.value]) voiceInput.placeholder = knownVoices[langSel.value];
-            });
-
-            const removeBtn = document.createElement('button');
-            removeBtn.textContent = '×';
-            removeBtn.title = 'Remove';
-            removeBtn.onclick = () => row.remove();
-
-            row.appendChild(langSel);
-            row.appendChild(voiceInput);
-            row.appendChild(removeBtn);
-            list.appendChild(row);
-        }
-
-        function collectVoiceOverrides() {
-            const rows = document.querySelectorAll('.voice-override-row');
-            const pairs = [];
-            rows.forEach(row => {
-                const lang = row.querySelector('select').value;
-                const voice = row.querySelector('input').value.trim();
-                if (lang && voice) pairs.push(`${lang}=${voice}`);
-            });
-            return pairs.join(',');
-        }
-
-        // ── Generate ───────────────────────────────────────────
-        async function startGeneration() {
-            if (!fileId) return;
-
-            // ── Client-side validation ──────────────────────────
-            let valid = true;
-            const fieldErr = (id, msg) => {
-                const el = document.getElementById(id);
-                el.textContent = msg; el.style.display = msg ? 'block' : 'none';
-                if (msg) valid = false;
-            };
-
-            const speedsRaw = document.getElementById('target-speeds').value.trim();
-            const speeds = speedsRaw.split(/\s+/).filter(Boolean).map(Number);
-            if (speeds.some(isNaN) || speeds.length === 0) {
-                fieldErr('err-target-speeds', 'Enter 1–3 space-separated numbers.');
-            } else if (speeds.length > 3) {
-                fieldErr('err-target-speeds', 'Maximum 3 repetitions allowed.');
-            } else if (speeds.some(v => v < 0.5 || v > 3.0)) {
-                fieldErr('err-target-speeds', 'Each speed must be between 0.5 and 3.0.');
-            } else {
-                fieldErr('err-target-speeds', '');
             }
 
-            const pTarget = parseFloat(document.getElementById('pause-target').value);
-            const pTranslation = parseFloat(document.getElementById('pause-translation').value);
-            fieldErr('err-pause-target', (!isNaN(pTarget) && pTarget > 3) ? 'Maximum pause is 3s.' : '');
-            fieldErr('err-pause-translation', (!isNaN(pTranslation) && pTranslation > 3) ? 'Maximum pause is 3s.' : '');
-
-            if (!valid) return;
-            // ───────────────────────────────────────────────────
-
-            const btn = document.getElementById('generate-btn');
-            btn.disabled = true;
-
-            const payload = {
-                file_id: fileId,
-                learning_lang: document.getElementById('learning-lang').value,
-                target_speeds: document.getElementById('target-speeds').value.trim(),
-                pause_after_target: parseFloat(document.getElementById('pause-target').value) || 1.0,
-                pause_after_translation: parseFloat(document.getElementById('pause-translation').value) || 1.5,
-                no_translation: document.getElementById('no-translation').checked,
-                split: document.getElementById('split-mode').checked,
-                rows: document.getElementById('rows').value.trim(),
-                voice_overrides: collectVoiceOverrides(),
-            };
-
-            _enablePageTab('result');
-            switchPageTab('result');
-            document.getElementById('status-running').style.display = 'block';
-            document.getElementById('status-done').style.display = 'none';
-            document.getElementById('status-error').style.display = 'none';
-
-            let jobId;
-            try {
-                const res = await fetch('/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+            // ── Manual entry ───────────────────────────────────────
+            function updateManualTranslationVisibility() {
+                const hasTransLang = document.getElementById('manual-translation-lang').value.trim() !== '';
+                document.querySelectorAll('.manual-pair-row').forEach(row => {
+                    const tInput = row.querySelector('.manual-translation');
+                    if (tInput) tInput.style.display = hasTransLang ? '' : 'none';
                 });
-                const data = await res.json();
-                if (!res.ok) { showJobError(data.error || 'Failed to start generation.'); btn.disabled = false; return; }
-                jobId = data.job_id;
-            } catch {
-                showJobError('Network error.'); btn.disabled = false; return;
             }
 
-            pollStatus(jobId, btn);
-        }
+            function addManualRow() {
+                const hasTransLang = document.getElementById('manual-translation-lang').value.trim() !== '';
+                const row = document.createElement('div');
+                row.className = 'manual-pair-row';
+                const lInput = document.createElement('input');
+                lInput.type = 'text'; lInput.className = 'manual-learning';
+                lInput.placeholder = 'Learning language text';
+                const tInput = document.createElement('input');
+                tInput.type = 'text'; tInput.className = 'manual-translation';
+                tInput.placeholder = 'Translation (optional)';
+                tInput.style.display = hasTransLang ? '' : 'none';
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '\u00d7'; removeBtn.title = 'Remove';
+                removeBtn.onclick = () => row.remove();
+                row.appendChild(lInput); row.appendChild(tInput); row.appendChild(removeBtn);
+                document.getElementById('manual-pairs-list').appendChild(row);
+                lInput.focus();
+            }
 
-        function pollStatus(jobId, btn) {
-            pollingTimer = setInterval(async () => {
+            {% if llm_enabled %}
+            let _suggestTimer = null;
+            function _startSuggestTimer(seconds, btn) {
+                if (_suggestTimer) clearInterval(_suggestTimer);
+                let rem = seconds;
+                btn.disabled = true; btn.textContent = `Wait ${rem}s`;
+                _suggestTimer = setInterval(() => {
+                    rem--;
+                    if (rem <= 0) { clearInterval(_suggestTimer); btn.disabled = false; btn.textContent = 'Generate'; }
+                    else { btn.textContent = `Wait ${rem}s`; }
+                }, 1000);
+            }
+            // Restore suggest cooldown on page load
+            if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
+                const lastS = parseInt(localStorage.getItem('tts_last_suggest') || '0', 10);
+                const remS = SUGGEST_COOLDOWN_SECONDS - Math.floor((Date.now() - lastS) / 1000);
+                if (remS > 0) {
+                    const btn = document.querySelector('[onclick="aiSuggest(this)"]');
+                    if (btn) _startSuggestTimer(remS, btn);
+                }
+            }
+
+            async function aiSuggest(btn) {
+                const word = document.getElementById('ai-word').value.trim();
+                const learningLang = document.getElementById('manual-learning-lang').value.trim();
+                const translationLang = document.getElementById('manual-translation-lang').value.trim();
+                const errEl = document.getElementById('ai-error');
+                errEl.style.display = 'none';
+                if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
+                if (!learningLang) { errEl.textContent = 'Set the learning language code first.'; errEl.style.display = 'block'; return; }
+                btn.disabled = true; btn.textContent = 'Generate';
+                document.getElementById('ai-spinner').style.display = 'block';
                 try {
-                    const res = await fetch(`/status/${jobId}`);
+                    const res = await fetch('/suggest', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang }),
+                    });
                     const data = await res.json();
-                    if (data.status === 'done') {
-                        clearInterval(pollingTimer);
-                        document.getElementById('status-running').style.display = 'none';
-                        const isZip = data.format === 'zip';
-                        const link = document.getElementById('download-link');
-                        link.href = `/download/${jobId}`;
-                        link.setAttribute('download', isZip ? 'audio_pack.zip' : 'audio.mp3');
-                        document.getElementById('download-label').textContent =
-                            isZip ? 'Download audio_pack.zip' : 'Download audio.mp3';
-                        document.getElementById('status-done').style.display = 'block';
-                        // Do NOT re-enable btn — start cooldown instead
-                        fileId = null; // consumed
-                        if (COOLDOWN_SECONDS && !IS_SU) {
-                            localStorage.setItem('tts_last_gen', Date.now());
-                            startCooldownTimer(COOLDOWN_SECONDS, btn);
-                        }
-                        if (refreshLimits) refreshLimits();
-                    } else if (data.status === 'error') {
-                        clearInterval(pollingTimer);
-                        showJobError(data.error || 'Unknown error during generation.');
-                        btn.disabled = false; // allow retry on error
+                    if (!res.ok) {
+                        errEl.textContent = data.error || 'Failed.';
+                        errEl.style.display = 'block';
+                        btn.disabled = false;
+                        document.getElementById('ai-spinner').style.display = 'none';
+                        return;
                     }
+                    addManualRow();
+                    const rows = document.querySelectorAll('.manual-pair-row');
+                    const last = rows[rows.length - 1];
+                    last.querySelector('.manual-learning').value = data.learning || '';
+                    if (data.translation) last.querySelector('.manual-translation').value = data.translation;
+                    document.getElementById('ai-word').value = '';
+                    if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
+                        localStorage.setItem('tts_last_suggest', Date.now());
+                        document.getElementById('ai-spinner').style.display = 'none';
+                        _startSuggestTimer(SUGGEST_COOLDOWN_SECONDS, btn);
+                    } else {
+                        document.getElementById('ai-spinner').style.display = 'none';
+                        btn.disabled = false; btn.textContent = 'Generate';
+                    }
+                    // Auto-advance to Configure after a phrase is ready
+                    await submitManual();
                 } catch {
-                    // network hiccup — keep polling
+                    errEl.textContent = 'Network error.'; errEl.style.display = 'block';
+                    btn.disabled = false; btn.textContent = 'Generate';
+                    document.getElementById('ai-spinner').style.display = 'none';
                 }
-            }, 2000);
-        }
-
-        function showJobError(msg) {
-            document.getElementById('status-running').style.display = 'none';
-            const el = document.getElementById('status-error');
-            el.textContent = msg;
-            el.style.display = 'block';
-        }
-
-        function resetAll() {
-            clearInterval(pollingTimer);
-            document.getElementById('status-running').style.display = 'none';
-            document.getElementById('status-done').style.display = 'none';
-            document.getElementById('status-error').style.display = 'none';
-            document.getElementById('generate-btn').disabled = false;
-            document.getElementById('generate-btn-label').textContent = 'Generate audio';
-            _disablePageTab('options');
-            _disablePageTab('result');
-            switchPageTab('source');
-            document.getElementById('voice-overrides-list').innerHTML = '';
-            document.getElementById('rows').value = '';
-            document.getElementById('manual-pairs-list').innerHTML = '';
-            // lang codes are intentionally kept — they reflect the user's last-used preference
-            resetUpload();
-        }
-
-        // ── Cooldown timer ─────────────────────────────────────
-        let _cooldownTimer = null;
-        function startCooldownTimer(seconds, btn) {
-            if (_cooldownTimer) clearInterval(_cooldownTimer);
-            const label = document.getElementById('generate-btn-label');
-            let remaining = seconds;
-            btn.disabled = true;
-            label.textContent = `Wait ${remaining}s…`;
-            _cooldownTimer = setInterval(() => {
-                remaining--;
-                if (remaining <= 0) {
-                    clearInterval(_cooldownTimer);
-                    btn.disabled = false;
-                    label.textContent = 'Generate audio';
-                } else {
-                    label.textContent = `Wait ${remaining}s…`;
-                }
-            }, 1000);
-        }
-
-        // Restore cooldown on page load (survives browser refresh)
-        if (!IS_SU && COOLDOWN_SECONDS) {
-            const lastGen = parseInt(localStorage.getItem('tts_last_gen') || '0', 10);
-            const elapsed = Math.floor((Date.now() - lastGen) / 1000);
-            const remaining = COOLDOWN_SECONDS - elapsed;
-            if (remaining > 0) {
-                startCooldownTimer(remaining, document.getElementById('generate-btn'));
             }
-        }
+            {% endif %}
 
-        // ── Usage / limits panel (regular users only) ──────────
-        let refreshLimits;
-        if (!IS_SU) {
-            refreshLimits = async function () {
+            async function submitManual() {
+                showUploadError('');
+                const langRe = /^[a-zA-Z]{2,10}$/;
+                const learningLang = document.getElementById('manual-learning-lang').value.trim();
+                if (!learningLang) { showUploadError('Learning language code is required.'); return; }
+                if (!langRe.test(learningLang)) { showUploadError(`Invalid learning language code "${learningLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
+                const translationLang = document.getElementById('manual-translation-lang').value.trim();
+                if (translationLang && !langRe.test(translationLang)) { showUploadError(`Invalid translation language code "${translationLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
+                const effectiveTransLang = translationLang || '_';
+                const pairs = [];
+                document.querySelectorAll('.manual-pair-row').forEach(row => {
+                    const lText = row.querySelector('.manual-learning').value.trim();
+                    if (!lText) return;
+                    const tText = translationLang ? row.querySelector('.manual-translation').value.trim() : '';
+                    pairs.push({ [learningLang]: lText, [effectiveTransLang]: tText });
+                });
+                if (!pairs.length) { showUploadError('Enter at least one sentence.'); return; }
+                const blob = new Blob([JSON.stringify(pairs)], { type: 'application/json' });
+                const file = new File([blob], 'manual-input.json', { type: 'application/json' });
+                const formData = new FormData();
+                formData.append('file', file);
+                const meta = `${pairs.length} pair${pairs.length > 1 ? 's' : ''} · ${learningLang}${translationLang ? ' / ' + translationLang : ' (no translation)'}`;
+                await _doUpload(formData, `${pairs.length} sentence pair${pairs.length > 1 ? 's' : ''} (manual)`, meta, learningLang, !translationLang);
+            }
+
+            // ── Shared upload handler ──────────────────────────────
+            async function _doUpload(formData, displayName, metaHint, autoLearningLang, autoNoTranslation) {
+                let result;
                 try {
-                    const res = await fetch('/limits');
-                    const d = await res.json();
-                    if (!res.ok || d.is_su) return;
+                    const res = await fetch('/upload', { method: 'POST', body: formData });
+                    result = await res.json();
+                    if (!res.ok) { showUploadError(result.error || 'Upload failed.'); return; }
+                } catch { showUploadError('Network error during upload.'); return; }
 
-                    const w = d.window_seconds;
-                    document.getElementById('limits-window-label').textContent = `(rolling ${w}s window)`;
+                fileId = result.file_id;
+                detectedLangs = result.langs;
+                const capped = result.count >= MAX_ROWS ? ` (capped at ${MAX_ROWS})` : '';
+                document.getElementById('file-name-label').textContent = displayName;
+                document.getElementById('file-meta-label').textContent =
+                    metaHint || `${result.count} pairs${capped} · ${result.langs.join(' / ')}`;
+                document.getElementById('file-info').style.display = 'flex';
+                document.getElementById('drop-zone').style.display = 'none';
+                document.getElementById('manual-panel').style.display = 'none';
+                populateLangSelect(result.langs);
+                if (autoLearningLang) document.getElementById('learning-lang').value = autoLearningLang;
+                if (autoNoTranslation) document.getElementById('no-translation').checked = true;
+                // Render pairs preview (both Source and Configure panels)
+                if (result.first_pairs && result.first_pairs.length) {
+                    const langs = result.langs;
+                    const total = result.count;
+                    const countLabel = `(first ${result.first_pairs.length} of ${total} pair${total > 1 ? 's' : ''})`;
+                    function _buildPreview(headId, bodyId, countId, containerId) {
+                        document.getElementById(headId).innerHTML = '<tr><th>#</th>' + langs.map(l => `<th>${l}</th>`).join('') + '</tr>';
+                        document.getElementById(bodyId).innerHTML = result.first_pairs.map((p, i) =>
+                            `<tr><td style="color:var(--muted);width:2rem">${i + 1}</td>` +
+                            langs.map(l => `<td>${p[l] || ''}</td>`).join('') + '</tr>'
+                        ).join('');
+                        document.getElementById(countId).textContent = countLabel;
+                        document.getElementById(containerId).style.display = '';
+                    }
+                    _buildPreview('pairs-preview-head', 'pairs-preview-body', 'pairs-preview-count', 'pairs-preview');
+                    _buildPreview('pairs-preview-source-head', 'pairs-preview-source-body', 'pairs-preview-source-count', 'pairs-preview-source');
+                }
+                _enablePageTab('options');
+                switchPageTab('options');
+            }
 
-                    function row(label, used, limit, unit = '') {
-                        const disabled = !limit;
-                        const pct = disabled ? 0 : Math.min(100, (used / limit) * 100);
-                        const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
-                        const valText = disabled
-                            ? `${used}${unit} / <span style="color:var(--muted)">unlimited</span>`
-                            : `${used}${unit} / ${limit}${unit}`;
-                        const bar = disabled ? '' :
-                            `<div class="usage-bar-wrap"><div class="usage-bar ${cls}" style="width:${pct}%"></div></div>`;
-                        return `<div class="usage-row">
+            // ── Drop zone ──────────────────────────────────────────
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            });
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+            async function handleFile(file) {
+                showUploadError('');
+                const formData = new FormData();
+                formData.append('file', file);
+                await _doUpload(formData, file.name, null, null, false);
+            }
+
+            function showUploadError(msg) {
+                const el = document.getElementById('upload-error');
+                el.textContent = msg;
+                el.style.display = msg ? 'block' : 'none';
+            }
+
+            function resetUpload() {
+                fileId = null;
+                detectedLangs = [];
+                fileInput.value = '';
+                document.getElementById('file-info').style.display = 'none';
+                // restore whichever panel was active
+                if (activeTab === 'file') {
+                    document.getElementById('drop-zone').style.display = 'block';
+                } else {
+                    document.getElementById('manual-panel').style.display = '';
+                }
+                document.getElementById('pairs-preview').style.display = 'none';
+                document.getElementById('pairs-preview-body').innerHTML = '';
+                document.getElementById('pairs-preview-head').innerHTML = '';
+                document.getElementById('pairs-preview-source').style.display = 'none';
+                document.getElementById('pairs-preview-source-body').innerHTML = '';
+                document.getElementById('pairs-preview-source-head').innerHTML = '';
+                _disablePageTab('options');
+                _disablePageTab('result');
+                switchPageTab('source');
+                showUploadError('');
+            }
+
+            // ── Language select ────────────────────────────────────
+            function populateLangSelect(langs) {
+                const sel = document.getElementById('learning-lang');
+                sel.innerHTML = '';
+                langs.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l;
+                    opt.textContent = l;
+                    sel.appendChild(opt);
+                });
+            }
+
+            // ── Voice overrides ────────────────────────────────────
+            const knownLangs = {{ known_langs | tojson }};
+            const knownVoices = {{ known_voices | tojson }};
+
+            function addVoiceRow(lang = '', voice = '') {
+                const list = document.getElementById('voice-overrides-list');
+                const row = document.createElement('div');
+                row.className = 'voice-override-row';
+
+                const langSel = document.createElement('select');
+                langSel.innerHTML = '<option value="">— lang —</option>';
+                knownLangs.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l; opt.textContent = l;
+                    if (l === lang) opt.selected = true;
+                    langSel.appendChild(opt);
+                });
+
+                const voiceInput = document.createElement('input');
+                voiceInput.type = 'text';
+                voiceInput.placeholder = 'e.g. en-US-GuyNeural';
+                voiceInput.value = voice;
+
+                langSel.addEventListener('change', () => {
+                    if (knownVoices[langSel.value]) voiceInput.placeholder = knownVoices[langSel.value];
+                });
+
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove';
+                removeBtn.onclick = () => row.remove();
+
+                row.appendChild(langSel);
+                row.appendChild(voiceInput);
+                row.appendChild(removeBtn);
+                list.appendChild(row);
+            }
+
+            function collectVoiceOverrides() {
+                const rows = document.querySelectorAll('.voice-override-row');
+                const pairs = [];
+                rows.forEach(row => {
+                    const lang = row.querySelector('select').value;
+                    const voice = row.querySelector('input').value.trim();
+                    if (lang && voice) pairs.push(`${lang}=${voice}`);
+                });
+                return pairs.join(',');
+            }
+
+            // ── Generate ───────────────────────────────────────────
+            async function startGeneration() {
+                if (!fileId) return;
+
+                // ── Client-side validation ──────────────────────────
+                let valid = true;
+                const fieldErr = (id, msg) => {
+                    const el = document.getElementById(id);
+                    el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+                    if (msg) valid = false;
+                };
+
+                const speedsRaw = document.getElementById('target-speeds').value.trim();
+                const speeds = speedsRaw.split(/\s+/).filter(Boolean).map(Number);
+                if (speeds.some(isNaN) || speeds.length === 0) {
+                    fieldErr('err-target-speeds', 'Enter 1–3 space-separated numbers.');
+                } else if (speeds.length > 3) {
+                    fieldErr('err-target-speeds', 'Maximum 3 repetitions allowed.');
+                } else if (speeds.some(v => v < 0.5 || v > 3.0)) {
+                    fieldErr('err-target-speeds', 'Each speed must be between 0.5 and 3.0.');
+                } else {
+                    fieldErr('err-target-speeds', '');
+                }
+
+                const pTarget = parseFloat(document.getElementById('pause-target').value);
+                const pTranslation = parseFloat(document.getElementById('pause-translation').value);
+                fieldErr('err-pause-target', (!isNaN(pTarget) && pTarget > 3) ? 'Maximum pause is 3s.' : '');
+                fieldErr('err-pause-translation', (!isNaN(pTranslation) && pTranslation > 3) ? 'Maximum pause is 3s.' : '');
+
+                if (!valid) return;
+                // ───────────────────────────────────────────────────
+
+                const btn = document.getElementById('generate-btn');
+                btn.disabled = true;
+
+                const payload = {
+                    file_id: fileId,
+                    learning_lang: document.getElementById('learning-lang').value,
+                    target_speeds: document.getElementById('target-speeds').value.trim(),
+                    pause_after_target: parseFloat(document.getElementById('pause-target').value) || 1.0,
+                    pause_after_translation: parseFloat(document.getElementById('pause-translation').value) || 1.5,
+                    no_translation: document.getElementById('no-translation').checked,
+                    split: document.getElementById('split-mode').checked,
+                    rows: document.getElementById('rows').value.trim(),
+                    voice_overrides: collectVoiceOverrides(),
+                };
+
+                _enablePageTab('result');
+                switchPageTab('result');
+                document.getElementById('status-running').style.display = 'block';
+                document.getElementById('status-done').style.display = 'none';
+                document.getElementById('status-error').style.display = 'none';
+
+                let jobId;
+                try {
+                    const res = await fetch('/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { showJobError(data.error || 'Failed to start generation.'); btn.disabled = false; return; }
+                    jobId = data.job_id;
+                } catch {
+                    showJobError('Network error.'); btn.disabled = false; return;
+                }
+
+                pollStatus(jobId, btn);
+            }
+
+            function pollStatus(jobId, btn) {
+                pollingTimer = setInterval(async () => {
+                    try {
+                        const res = await fetch(`/status/${jobId}`);
+                        const data = await res.json();
+                        if (data.status === 'done') {
+                            clearInterval(pollingTimer);
+                            document.getElementById('status-running').style.display = 'none';
+                            const isZip = data.format === 'zip';
+                            const link = document.getElementById('download-link');
+                            link.href = `/download/${jobId}`;
+                            link.setAttribute('download', isZip ? 'audio_pack.zip' : 'audio.mp3');
+                            document.getElementById('download-label').textContent =
+                                isZip ? 'Download audio_pack.zip' : 'Download audio.mp3';
+                            document.getElementById('status-done').style.display = 'block';
+                            // Do NOT re-enable btn — start cooldown instead
+                            fileId = null; // consumed
+                            if (COOLDOWN_SECONDS && !IS_SU) {
+                                localStorage.setItem('tts_last_gen', Date.now());
+                                startCooldownTimer(COOLDOWN_SECONDS, btn);
+                            }
+                            if (refreshLimits) refreshLimits();
+                        } else if (data.status === 'error') {
+                            clearInterval(pollingTimer);
+                            showJobError(data.error || 'Unknown error during generation.');
+                            btn.disabled = false; // allow retry on error
+                        }
+                    } catch {
+                        // network hiccup — keep polling
+                    }
+                }, 2000);
+            }
+
+            function showJobError(msg) {
+                document.getElementById('status-running').style.display = 'none';
+                const el = document.getElementById('status-error');
+                el.textContent = msg;
+                el.style.display = 'block';
+            }
+
+            function resetAll() {
+                clearInterval(pollingTimer);
+                document.getElementById('status-running').style.display = 'none';
+                document.getElementById('status-done').style.display = 'none';
+                document.getElementById('status-error').style.display = 'none';
+                document.getElementById('generate-btn').disabled = false;
+                document.getElementById('generate-btn-label').textContent = 'Generate audio';
+                _disablePageTab('options');
+                _disablePageTab('result');
+                switchPageTab('source');
+                document.getElementById('voice-overrides-list').innerHTML = '';
+                document.getElementById('rows').value = '';
+                document.getElementById('manual-pairs-list').innerHTML = '';
+                // lang codes are intentionally kept — they reflect the user's last-used preference
+                resetUpload();
+            }
+
+            // ── Cooldown timer ─────────────────────────────────────
+            let _cooldownTimer = null;
+            function startCooldownTimer(seconds, btn) {
+                if (_cooldownTimer) clearInterval(_cooldownTimer);
+                const label = document.getElementById('generate-btn-label');
+                let remaining = seconds;
+                btn.disabled = true;
+                label.textContent = `Wait ${remaining}s…`;
+                _cooldownTimer = setInterval(() => {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(_cooldownTimer);
+                        btn.disabled = false;
+                        label.textContent = 'Generate audio';
+                    } else {
+                        label.textContent = `Wait ${remaining}s…`;
+                    }
+                }, 1000);
+            }
+
+            // Restore cooldown on page load (survives browser refresh)
+            if (!IS_SU && COOLDOWN_SECONDS) {
+                const lastGen = parseInt(localStorage.getItem('tts_last_gen') || '0', 10);
+                const elapsed = Math.floor((Date.now() - lastGen) / 1000);
+                const remaining = COOLDOWN_SECONDS - elapsed;
+                if (remaining > 0) {
+                    startCooldownTimer(remaining, document.getElementById('generate-btn'));
+                }
+            }
+
+            // ── Usage / limits panel (regular users only) ──────────
+            let refreshLimits;
+            if (!IS_SU) {
+                refreshLimits = async function () {
+                    try {
+                        const res = await fetch('/limits');
+                        const d = await res.json();
+                        if (!res.ok || d.is_su) return;
+
+                        const w = d.window_seconds;
+                        document.getElementById('limits-window-label').textContent = `(rolling ${w}s window)`;
+
+                        function row(label, used, limit, unit = '') {
+                            const disabled = !limit;
+                            const pct = disabled ? 0 : Math.min(100, (used / limit) * 100);
+                            const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
+                            const valText = disabled
+                                ? `${used}${unit} / <span style="color:var(--muted)">unlimited</span>`
+                                : `${used}${unit} / ${limit}${unit}`;
+                            const bar = disabled ? '' :
+                                `<div class="usage-bar-wrap"><div class="usage-bar ${cls}" style="width:${pct}%"></div></div>`;
+                            return `<div class="usage-row">
                             <span class="usage-label">${label}</span>
                             ${bar}
                             <span class="usage-value">${valText}</span>
                         </div>`;
-                    }
+                        }
 
-                    const l = d.limits, u = d.used;
-                    const cdRemaining = d.cooldown_remaining || 0;
-                    const cdLabel = d.cooldown_seconds
-                        ? (cdRemaining > 0 ? `<span style="color:var(--accent)">${cdRemaining}s remaining</span>` : `<span style="color:var(--green)">ready</span>`)
-                        : '<span style="color:var(--muted)">disabled</span>';
-                    document.getElementById('limits-rows').innerHTML =
-                        row('Requests this window', u.requests, l.rate_limit_requests) +
-                        row('Rows this window', u.rows, l.max_rows_per_window) +
-                        row('Max rows per file', '\u2014', 0).replace('\u2014 / unlimited',
-                            l.max_rows ? `<span style="color:var(--text)">${l.max_rows}</span>` : '<span style="color:var(--muted)">unlimited</span>') +
-                        row('Max string length', '\u2014', 0).replace('\u2014 / unlimited',
-                            l.max_string_length ? `<span style="color:var(--text)">${l.max_string_length} chars</span>` : '<span style="color:var(--muted)">unlimited</span>') +
-                        row('Generation timeout', '\u2014', 0).replace('\u2014 / unlimited',
-                            l.generation_timeout ? `<span style="color:var(--text)">${l.generation_timeout}s</span>` : '<span style="color:var(--muted)">unlimited</span>') +
-                        `<div class="usage-row"><span class="usage-label">Generation cooldown</span><span class="usage-value">${cdLabel}</span></div>`;
+                        const l = d.limits, u = d.used;
+                        const cdRemaining = d.cooldown_remaining || 0;
+                        const cdLabel = d.cooldown_seconds
+                            ? (cdRemaining > 0 ? `<span style="color:var(--accent)">${cdRemaining}s remaining</span>` : `<span style="color:var(--green)">ready</span>`)
+                            : '<span style="color:var(--muted)">disabled</span>';
+                        document.getElementById('limits-rows').innerHTML =
+                            row('Requests this window', u.requests, l.rate_limit_requests) +
+                            row('Rows this window', u.rows, l.max_rows_per_window) +
+                            row('Max rows per file', '\u2014', 0).replace('\u2014 / unlimited',
+                                l.max_rows ? `<span style="color:var(--text)">${l.max_rows}</span>` : '<span style="color:var(--muted)">unlimited</span>') +
+                            row('Max string length', '\u2014', 0).replace('\u2014 / unlimited',
+                                l.max_string_length ? `<span style="color:var(--text)">${l.max_string_length} chars</span>` : '<span style="color:var(--muted)">unlimited</span>') +
+                            row('Generation timeout', '\u2014', 0).replace('\u2014 / unlimited',
+                                l.generation_timeout ? `<span style="color:var(--text)">${l.generation_timeout}s</span>` : '<span style="color:var(--muted)">unlimited</span>') +
+                            `<div class="usage-row"><span class="usage-label">Generation cooldown</span><span class="usage-value">${cdLabel}</span></div>`;
 
-                    document.getElementById('limits-card').style.opacity = '1';
-                    document.getElementById('limits-refresh-dot').textContent =
-                        'updated ' + new Date().toLocaleTimeString();
-                } catch { /* silently ignore */ }
+                        document.getElementById('limits-card').style.opacity = '1';
+                        document.getElementById('limits-refresh-dot').textContent =
+                            'updated ' + new Date().toLocaleTimeString();
+                    } catch { /* silently ignore */ }
+                }
+                refreshLimits();
+                setInterval(refreshLimits, 15000);
             }
-            refreshLimits();
-            setInterval(refreshLimits, 15000);
-        }
-    </script>
+        </script>
 </body>
 
 </html>
