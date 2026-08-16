@@ -111,10 +111,16 @@ LLM_GROQ_MODEL=llama-3.1-8b-instant
 
 ## Disabling AI suggestions entirely
 
-Leave `LLM_DEFAULT` blank (or remove it). The **✨ AI phrase generator** UI section will not appear:
+Leave `LLM_DEFAULT` blank (or remove it). The **✨ AI phrase generator** UI section shows a locked state instead:
 
 ```dotenv
 LLM_DEFAULT=
+```
+
+To disable only the **cooldown** (let users generate phrases back-to-back):
+
+```dotenv
+LLM_SUGGEST_COOLDOWN_SECONDS=0
 ```
 
 ---
@@ -126,6 +132,7 @@ LLM_DEFAULT=
 | `LLM_DEFAULT` | `openrouter` | Provider for all regular users (`USERS`). Blank = disabled. |
 | `LLM_SU_DEFAULT` | *(blank)* | Provider for superusers (`SU_USERS`). Falls back to `LLM_DEFAULT` if blank. |
 | `LLM_USER_<USERNAME>` | *(none)* | Per-user override (edge cases). Takes priority over role defaults. |
+| `LLM_SUGGEST_COOLDOWN_SECONDS` | `60` | Seconds a regular user must wait between AI phrase requests (0 = disabled). SU users are exempt. |
 | `LLM_OPENROUTER_MODEL` | `meta-llama/llama-3.1-8b-instruct:free` | OpenRouter model ID |
 | `LLM_OPENROUTER_API_KEY` | *(required)* | OpenRouter API key |
 | `LLM_OPENROUTER_BASE_URL` | `https://openrouter.ai/api` | Override only if using a proxy |

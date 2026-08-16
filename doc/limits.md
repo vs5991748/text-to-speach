@@ -17,6 +17,7 @@ MAX_ROWS_PER_WINDOW=0    # no row-throughput cap
 RATE_LIMIT_REQUESTS=0    # no request-frequency cap
 GENERATION_TIMEOUT_SECONDS=0  # jobs run until they finish
 GENERATION_COOLDOWN_SECONDS=0 # no inter-generation wait
+LLM_SUGGEST_COOLDOWN_SECONDS=0 # no AI phrase cooldown
 ```
 
 Leaving a variable **blank** keeps the built-in default (same as omitting the line). Setting it to `0` is the explicit opt-out.
@@ -34,6 +35,7 @@ Leaving a variable **blank** keeps the built-in default (same as omitting the li
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Width of the sliding time window (seconds) used by request and row-throughput limits |
 | `GENERATION_TIMEOUT_SECONDS` | `600` | Maximum seconds a generation job may run before it is aborted |
 | `GENERATION_COOLDOWN_SECONDS` | `60` | Minimum seconds a user must wait between generation requests |
+| `LLM_SUGGEST_COOLDOWN_SECONDS` | `60` | Minimum seconds a user must wait between AI phrase suggestions (SU exempt) |
 
 ---
 
@@ -164,6 +166,26 @@ Please wait 42s before generating again.
 
 ---
 
+## LLM_SUGGEST_COOLDOWN_SECONDS — AI phrase cooldown
+
+After a successful AI phrase generation, the user must wait this many seconds before requesting another one. Superusers are exempt.
+
+**.env**
+```dotenv
+LLM_SUGGEST_COOLDOWN_SECONDS=60
+```
+
+Enforced on both client and server:
+- **Server** — rejects the `/suggest` call with `429` and includes seconds remaining.
+- **Browser** — the Generate button inside the AI phrase box shows a countdown (`Wait 42s`) and re-enables automatically. Survives a page refresh via `localStorage`.
+
+**What the user sees when exceeded:**
+```
+Please wait 42s before generating another phrase.
+```
+
+---
+
 ## Example: strict public configuration
 
 `.env` for a server shared with multiple users where you want tight guardrails:
@@ -180,6 +202,7 @@ RATE_LIMIT_REQUESTS=5
 RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_TIMEOUT_SECONDS=180
 GENERATION_COOLDOWN_SECONDS=120
+LLM_SUGGEST_COOLDOWN_SECONDS=120
 ```
 
 ## Example: relaxed local-only configuration
@@ -198,4 +221,5 @@ RATE_LIMIT_REQUESTS=50
 RATE_LIMIT_WINDOW_SECONDS=60
 GENERATION_TIMEOUT_SECONDS=1800
 GENERATION_COOLDOWN_SECONDS=0
+LLM_SUGGEST_COOLDOWN_SECONDS=0
 ```
