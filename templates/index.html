@@ -1109,7 +1109,8 @@
                     const last = rows[rows.length - 1];
                     last.querySelector('.manual-learning').value = data.learning || '';
                     if (data.translation) last.querySelector('.manual-translation').value = data.translation;
-                    document.getElementById('ai-word').value = '';
+                    // Word field intentionally kept — allows generating another pair with the same word
+                    document.getElementById('ai-word').select();
                     if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
                         localStorage.setItem('tts_last_suggest', Date.now());
                         document.getElementById('ai-spinner').style.display = 'none';
