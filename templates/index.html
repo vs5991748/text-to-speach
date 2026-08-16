@@ -1090,11 +1090,15 @@
                 if (!learningLang) { errEl.textContent = 'Set the learning language code first.'; errEl.style.display = 'block'; return; }
                 btn.disabled = true; btn.textContent = 'Generate';
                 document.getElementById('ai-spinner').style.display = 'block';
+                // Frontend timeout matches backend: (timeout + retries * backoff) + 20s buffer
+                const abortCtrl = new AbortController();
+                const abortTimer = setTimeout(() => abortCtrl.abort(), 240000);
                 try {
                     const res = await fetch('/suggest', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang, count }),
+                        signal: abortCtrl.signal,
                     });
                     const data = await res.json();
                     if (!res.ok) {
@@ -1130,10 +1134,16 @@
                         document.getElementById('ai-spinner').style.display = 'none';
                         btn.disabled = false; btn.textContent = 'Generate';
                     }
-                } catch {
-                    errEl.textContent = 'Network error.'; errEl.style.display = 'block';
+                } catch (err) {
+                    const msg = err.name === 'AbortError'
+                        ? 'Request timed out (server took too long). Check Render logs for LLM errors.'
+                        : `Network error: ${err.message || err}`;
+                    console.error('[suggest]', err);
+                    errEl.textContent = msg; errEl.style.display = 'block';
                     btn.disabled = false; btn.textContent = 'Generate';
                     document.getElementById('ai-spinner').style.display = 'none';
+                } finally {
+                    clearTimeout(abortTimer);
                 }
             }
             {% endif %}
