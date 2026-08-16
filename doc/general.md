@@ -41,6 +41,7 @@ python app.py
 **Source modes:**
 - **Upload file** — drag & drop or browse a `.csv` / `.json` file
 - **Enter sentences** — type pairs directly into the form; no file needed. Specify language codes, add as many pairs as you need, translation column is optional.
+- **AI phrase generator** — type a single word or collocation and let an LLM write a natural sentence and its translation for you. Requires an LLM provider to be configured (see [llm.md](llm.md)).
 
 The web interface supports all the same options as the CLI (speeds, pauses, voice overrides, skip-translation, split mode, row range) plus server-side [limits](limits.md) and [authentication](authorization.md).
 In **split mode** the download is a ZIP archive instead of a single MP3.

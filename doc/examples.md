@@ -195,6 +195,19 @@ Leave **Translation language code** blank to skip translation audio automaticall
 
 ---
 
+### AI phrase generator
+
+Requires an LLM provider configured in `.env` (see [llm.md](llm.md)).
+
+1. In the *Enter sentences* tab, set **Learning language code** to `en` and **Translation language code** to `uk`.
+2. In the **✨ AI phrase generator** box, type a word or collocation, e.g. `morning routine`.
+3. Click **Generate** — the LLM produces a natural sentence and fills in a new row:
+   - Learning: *I always start my morning routine with a cup of coffee.*
+   - Translation: *Я завжди починаю ранковий ритуал з чашки кави.*
+4. Repeat for other words, adjust any pairs manually, then click **Continue →**.
+
+---
+
 ### Split mode — one file per sentence pair
 
 Enable **One file per record** before generating. Instead of a single track you receive a ZIP archive where each sentence pair is its own MP3:

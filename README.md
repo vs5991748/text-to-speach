@@ -17,6 +17,7 @@ voices, no API key required) for natural-sounding speech.
 | Installation & setup | [doc/installation.md](doc/installation.md) |
 | Web authentication | [doc/authorization.md](doc/authorization.md) |
 | Rate limits & quotas | [doc/limits.md](doc/limits.md) |
+| LLM / AI phrase generation | [doc/llm.md](doc/llm.md) |
 | Examples | [doc/examples.md](doc/examples.md) |
 
 ## Setup
