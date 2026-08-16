@@ -601,6 +601,12 @@
             border-color: var(--accent);
         }
 
+        /* Pairs preview table */
+        #pairs-preview-table th, #pairs-preview-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        #pairs-preview-table th { color: var(--muted); font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; background: var(--surface2); }
+        #pairs-preview-table td { color: var(--text); }
+        #pairs-preview-table tr:last-child td { border-bottom: none; }
+
         /* Page-level step tabs */
         .page-tab-bar {
             display: grid;
@@ -875,6 +881,18 @@
                 </svg>
                 <span id="generate-btn-label">Generate audio</span>
             </button>
+
+            <div id="pairs-preview" style="display:none;margin-top:18px">
+                <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">
+                    Preview <span id="pairs-preview-count"></span>
+                </div>
+                <div style="overflow-x:auto">
+                    <table id="pairs-preview-table" style="width:100%;border-collapse:collapse;font-size:.83rem">
+                        <thead id="pairs-preview-head"></thead>
+                        <tbody id="pairs-preview-body"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Step 3: Status / Download -->
@@ -1098,6 +1116,21 @@
             populateLangSelect(result.langs);
             if (autoLearningLang) document.getElementById('learning-lang').value = autoLearningLang;
             if (autoNoTranslation) document.getElementById('no-translation').checked = true;
+            // Render pairs preview
+            if (result.first_pairs && result.first_pairs.length) {
+                const langs = result.langs;
+                const head = document.getElementById('pairs-preview-head');
+                const body = document.getElementById('pairs-preview-body');
+                head.innerHTML = '<tr><th>#</th>' + langs.map(l => `<th>${l}</th>`).join('') + '</tr>';
+                body.innerHTML = result.first_pairs.map((p, i) =>
+                    `<tr><td style="color:var(--muted);width:2rem">${i + 1}</td>` +
+                    langs.map(l => `<td>${p[l] || ''}</td>`).join('') + '</tr>'
+                ).join('');
+                const total = result.count;
+                document.getElementById('pairs-preview-count').textContent =
+                    `(first ${result.first_pairs.length} of ${total} pair${total > 1 ? 's' : ''})`;
+                document.getElementById('pairs-preview').style.display = '';
+            }
             _enablePageTab('options');
             switchPageTab('options');
         }
@@ -1140,6 +1173,9 @@
             } else {
                 document.getElementById('manual-panel').style.display = '';
             }
+            document.getElementById('pairs-preview').style.display = 'none';
+            document.getElementById('pairs-preview-body').innerHTML = '';
+            document.getElementById('pairs-preview-head').innerHTML = '';
             _disablePageTab('options');
             _disablePageTab('result');
             switchPageTab('source');

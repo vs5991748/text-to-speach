@@ -323,6 +323,7 @@ def upload():
         _uploads[file_id] = {"path": tmp.name, "count": len(pairs)}
 
     return jsonify({"file_id": file_id, "langs": langs, "count": len(pairs),
+                    "first_pairs": pairs[:10],
                     "limits": {"max_rows": MAX_ROWS, "max_string_length": MAX_STRING_LENGTH}})
 
 
