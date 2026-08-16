@@ -602,15 +602,75 @@
         }
 
         /* Page-level step tabs */
-        .page-tab-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; }
-        .page-tab { padding: 13px 8px; border: none; cursor: pointer; font-size: .88rem; font-weight: 600; background: none; color: var(--muted); transition: color .15s, background .15s; border-right: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .page-tab:last-child { border-right: none; }
-        .page-tab.active { color: var(--text); background: var(--surface2); }
-        .page-tab:disabled { opacity: .38; cursor: not-allowed; }
-        .page-tab:not(:disabled):not(.active):hover { color: var(--text); background: var(--surface2); opacity: .8; }
-        .ptab-num { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-dim); border: 1.5px solid var(--accent); color: var(--accent); font-size: .72rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .page-tab.active .ptab-num { background: var(--accent); color: #fff; border-color: var(--accent); }
-        .tab-panel-card { border-radius: 0 0 var(--radius) var(--radius) !important; border-top: none !important; }
+        .page-tab-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius) var(--radius) 0 0;
+            overflow: hidden;
+        }
+
+        .page-tab {
+            padding: 13px 8px;
+            border: none;
+            cursor: pointer;
+            font-size: .88rem;
+            font-weight: 600;
+            background: none;
+            color: var(--muted);
+            transition: color .15s, background .15s;
+            border-right: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .page-tab:last-child {
+            border-right: none;
+        }
+
+        .page-tab.active {
+            color: var(--text);
+            background: var(--surface2);
+        }
+
+        .page-tab:disabled {
+            opacity: .38;
+            cursor: not-allowed;
+        }
+
+        .page-tab:not(:disabled):not(.active):hover {
+            color: var(--text);
+            background: var(--surface2);
+            opacity: .8;
+        }
+
+        .ptab-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 1.5px solid var(--accent);
+            color: var(--accent);
+            font-size: .72rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .page-tab.active .ptab-num {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .tab-panel-card {
+            border-radius: 0 0 var(--radius) var(--radius) !important;
+            border-top: none !important;
+        }
     </style>
 </head>
 
@@ -686,19 +746,27 @@
                 </div>
 
                 {% if llm_enabled %}
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
-                    <div style="font-size:.8rem;color:var(--accent);font-weight:600;margin-bottom:8px">&#10024; AI phrase generator</div>
+                <div
+                    style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+                    <div style="font-size:.8rem;color:var(--accent);font-weight:600;margin-bottom:8px">&#10024; AI
+                        phrase generator</div>
                     <div style="display:flex;gap:8px">
-                        <input type="text" id="ai-word" placeholder="word or collocation&hellip; e.g. commute, run fast" style="flex:1" />
+                        <input type="text" id="ai-word" placeholder="word or collocation&hellip; e.g. commute, run fast"
+                            style="flex:1" />
                         <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;width:auto"
                             onclick="aiSuggest(this)">Generate</button>
                     </div>
-                    <span id="ai-error" class="hint" style="color:var(--red);display:none;margin-top:6px;display:block"></span>
+                    <span id="ai-error" class="hint"
+                        style="color:var(--red);display:none;margin-top:6px;display:block"></span>
                 </div>
                 {% else %}
-                <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:14px;opacity:.55">
-                    <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:4px">&#128274; AI phrase generator — unavailable</div>
-                    <p style="font-size:.82rem;color:var(--muted);margin:0">{{ llm_lock_reason }} See <a href="https://github.com/vs5991748/text-to-speach/blob/master/doc/llm.md" target="_blank" style="color:var(--accent)">doc/llm.md</a> for setup instructions.</p>
+                <div
+                    style="background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:14px;opacity:.55">
+                    <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:4px">&#128274; AI
+                        phrase generator — unavailable</div>
+                    <p style="font-size:.82rem;color:var(--muted);margin:0">{{ llm_lock_reason }} See <a
+                            href="https://github.com/vs5991748/text-to-speach/blob/master/doc/llm.md" target="_blank"
+                            style="color:var(--accent)">doc/llm.md</a> for setup instructions.</p>
                 </div>
                 {% endif %}
 
