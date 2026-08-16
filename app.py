@@ -52,7 +52,7 @@ _LLM_DEFAULT_URLS = {
     "ollama": "http://localhost:11434",
 }
 _LLM_DEFAULT_MODELS = {
-    "openrouter": "mistralai/mistral-7b-instruct:free",
+    "openrouter": "google/gemma-2-9b-it:free",
     "groq": "llama-3.1-8b-instant",
     "ollama": "llama3.2",
 }

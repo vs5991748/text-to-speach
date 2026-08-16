@@ -25,10 +25,12 @@ Three providers are supported out of the box. All use the OpenAI-compatible `/v1
 ```dotenv
 LLM_DEFAULT=openrouter
 LLM_OPENROUTER_API_KEY=sk-or-your-key-here
-LLM_OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free
+LLM_OPENROUTER_MODEL=google/gemma-2-9b-it:free
 ```
 
-The `mistralai/mistral-7b-instruct:free` model is free with no credit card. Browse more models at [openrouter.ai/models](https://openrouter.ai/models) — filter by *Free* to find others.
+The `google/gemma-2-9b-it:free` model is free with no credit card. Browse more models at [openrouter.ai/models](https://openrouter.ai/models) — filter by *Free* to find others.
+
+> **Note:** Free model slugs on OpenRouter can be discontinued without notice. If you get a 404 error, go to [openrouter.ai/models](https://openrouter.ai/models), filter by *Free*, and update `LLM_OPENROUTER_MODEL` in your `.env` (or Render environment variables) with a currently available slug.
 
 ---
 
@@ -91,7 +93,7 @@ LLM_SU_DEFAULT=groq         # all superusers (SU_USERS); falls back to LLM_DEFAU
 ```dotenv
 LLM_DEFAULT=openrouter
 LLM_OPENROUTER_API_KEY=sk-or-...
-LLM_OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free
+LLM_OPENROUTER_MODEL=google/gemma-2-9b-it:free
 
 LLM_SU_DEFAULT=groq
 LLM_GROQ_API_KEY=gsk_...
@@ -133,7 +135,7 @@ LLM_SUGGEST_COOLDOWN_SECONDS=0
 | `LLM_SU_DEFAULT` | *(blank)* | Provider for superusers (`SU_USERS`). Falls back to `LLM_DEFAULT` if blank. |
 | `LLM_USER_<USERNAME>` | *(none)* | Per-user override (edge cases). Takes priority over role defaults. |
 | `LLM_SUGGEST_COOLDOWN_SECONDS` | `60` | Seconds a regular user must wait between AI phrase requests (0 = disabled). SU users are exempt. |
-| `LLM_OPENROUTER_MODEL` | `mistralai/mistral-7b-instruct:free` | OpenRouter model ID |
+| `LLM_OPENROUTER_MODEL` | `google/gemma-2-9b-it:free` | OpenRouter model ID |
 | `LLM_OPENROUTER_API_KEY` | *(required)* | OpenRouter API key |
 | `LLM_OPENROUTER_BASE_URL` | `https://openrouter.ai/api` | Override only if using a proxy |
 | `LLM_GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model ID |
@@ -167,7 +169,7 @@ Recommended setup for Render:
 
 ```dotenv
 LLM_DEFAULT=openrouter
-LLM_OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free
+LLM_OPENROUTER_MODEL=google/gemma-2-9b-it:free
 LLM_OPENROUTER_API_KEY=sk-or-your-key-here
 ```
 
