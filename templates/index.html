@@ -758,15 +758,23 @@
             <div id="manual-panel" style="display:none">
                 <div class="row" style="margin-bottom:14px">
                     <div class="field">
-                        <label for="manual-learning-lang">Learning language code <span class="required">*</span></label>
-                        <input type="text" id="manual-learning-lang" placeholder="e.g. ro" maxlength="10"
-                            oninput="localStorage.setItem('tts_learning_lang', this.value)" />
+                        <label for="manual-learning-lang">Learning language <span class="required">*</span></label>
+                        <select id="manual-learning-lang"
+                            onchange="localStorage.setItem('tts_learning_lang', this.value); _enforceDifferentLangs('learning')">
+                            {% for lang in known_langs %}
+                            <option value="{{ lang }}">{{ lang }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="field">
-                        <label for="manual-translation-lang">Translation language code <span class="hint"
-                                style="font-weight:400">(optional)</span></label>
-                        <input type="text" id="manual-translation-lang" placeholder="e.g. en" maxlength="10"
-                            oninput="localStorage.setItem('tts_translation_lang', this.value); updateManualTranslationVisibility()" />
+                        <label for="manual-translation-lang">Translation language <span class="hint" style="font-weight:400">(optional)</span></label>
+                        <select id="manual-translation-lang"
+                            onchange="localStorage.setItem('tts_translation_lang', this.value); updateManualTranslationVisibility(); _enforceDifferentLangs('translation')">
+                            <option value="">&mdash; none &mdash;</option>
+                            {% for lang in known_langs %}
+                            <option value="{{ lang }}">{{ lang }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
@@ -1004,11 +1012,22 @@
         function _enablePageTab(name) { document.getElementById('ptab-' + name).disabled = false; }
         function _disablePageTab(name) { document.getElementById('ptab-' + name).disabled = true; }
 
-        // Seed lang code fields from localStorage, falling back to sensible defaults
+        // Seed lang selects from localStorage, falling back to sensible defaults
         document.getElementById('manual-learning-lang').value =
             localStorage.getItem('tts_learning_lang') ?? 'en';
         document.getElementById('manual-translation-lang').value =
             localStorage.getItem('tts_translation_lang') ?? 'uk';
+
+        function _enforceDifferentLangs(changed) {
+            const l = document.getElementById('manual-learning-lang');
+            const t = document.getElementById('manual-translation-lang');
+            if (t.value && t.value === l.value) {
+                // reset whichever wasn't just changed
+                if (changed === 'learning') { t.value = ''; localStorage.setItem('tts_translation_lang', ''); }
+                else { l.value = ''; }
+                updateManualTranslationVisibility();
+            }
+        }
 
         // Show manual panel by default
         switchTab('manual');
@@ -1154,10 +1173,9 @@
             showUploadError('');
             const langRe = /^[a-zA-Z]{2,10}$/;
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
-            if (!learningLang) { showUploadError('Learning language code is required.'); return; }
-            if (!langRe.test(learningLang)) { showUploadError(`Invalid learning language code "${learningLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
+            if (!learningLang) { showUploadError('Select a learning language.'); return; }
             const translationLang = document.getElementById('manual-translation-lang').value.trim();
-            if (translationLang && !langRe.test(translationLang)) { showUploadError(`Invalid translation language code "${translationLang}". Use 2–10 letters, e.g. en, ro, uk.`); return; }
+            if (translationLang && !langRe.test(translationLang)) { showUploadError(`Invalid translation language code "${translationLang}".`); return; }
             const effectiveTransLang = translationLang || '_';
             const pairs = [];
             document.querySelectorAll('.manual-pair-row').forEach(row => {
