@@ -1043,6 +1043,8 @@
                 } else {
                     btn.disabled = false; btn.textContent = 'Generate';
                 }
+                // Auto-advance to Configure after a phrase is ready
+                await submitManual();
             } catch {
                 errEl.textContent = 'Network error.'; errEl.style.display = 'block';
                 btn.disabled = false; btn.textContent = 'Generate';
