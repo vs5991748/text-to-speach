@@ -191,7 +191,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
         "model": cfg["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.8,
-        "max_tokens": 150,
+        "max_tokens": 600,
     }).encode()
     headers = {"Content-Type": "application/json"}
     if cfg["api_key"]:
@@ -201,12 +201,15 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
-    print(f"[LLM] response keys: {list(data.keys())}", file=sys.stderr, flush=True)
-    raw_content = data["choices"][0]["message"].get("content")
-    if raw_content is None:
-        # Some models return None content (tool_calls or reasoning models) — log and raise
-        print(f"[LLM] null content in response: {json.dumps(data)[:500]}", file=sys.stderr, flush=True)
-        raise ValueError("LLM returned null content. Try a different model (e.g. google/gemma-2-9b-it:free).")
+    choice = data["choices"][0]
+    finish = choice.get("finish_reason")
+    msg = choice["message"]
+    # Reasoning models put output in 'content'; fall back to 'reasoning' if content is null
+    raw_content = msg.get("content") or msg.get("reasoning")
+    if not raw_content:
+        print(f"[LLM] null content finish_reason={finish} response: {json.dumps(data)[:500]}", file=sys.stderr, flush=True)
+        hint = " (model hit token limit during reasoning — increase max_tokens or use a non-reasoning model)" if finish == "length" else ""
+        raise ValueError(f"LLM returned no usable content{hint}.")
     content = raw_content.strip()
     if "```" in content:
         content = re.sub(r"```(?:json)?", "", content).strip()
