@@ -173,23 +173,37 @@ _last_suggest_time_lock = threading.Lock()
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
-def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -> dict:
-    """Call an OpenAI-compatible LLM with retry/backoff. Returns {learning, translation}."""
+def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, count: int = 1) -> list:
+    """Call an OpenAI-compatible LLM with retry/backoff. Returns list of {learning, translation}."""
     url = f"{cfg['base_url']}/v1/chat/completions"
-    print(f"[LLM] POST {url} model={cfg['model']} word={word!r}", file=sys.stderr, flush=True)
-    trans_part = (
-        f' Then translate the sentence into the language with code "{translation_lang}".'
-        if translation_lang else ""
-    )
-    trans_field = ', "translation": "<translation>"' if translation_lang else ""
-    prompt = (
-        f'You are a language learning assistant. '
-        f'Write one short, natural, everyday sentence in the language with code "{learning_lang}" '
-        f'that uses or illustrates the word or phrase "{word}".'
-        f'{trans_part} '
-        f'Respond with ONLY valid JSON, no extra text: '
-        f'{{"learning": "<sentence>"{trans_field}}}'
-    )
+    print(f"[LLM] POST {url} model={cfg['model']} word={word!r} count={count}", file=sys.stderr, flush=True)
+    if count == 1:
+        trans_part = (
+            f' Then translate the sentence into the language with code "{translation_lang}".'
+            if translation_lang else ""
+        )
+        trans_field = ', "translation": "<translation>"' if translation_lang else ""
+        prompt = (
+            f'You are a language learning assistant. '
+            f'Write one short, natural, everyday sentence in the language with code "{learning_lang}" '
+            f'that uses or illustrates the word or phrase "{word}".'
+            f'{trans_part} '
+            f'Respond with ONLY valid JSON, no extra text: '
+            f'{{"learning": "<sentence>"{trans_field}}}'
+        )
+    else:
+        trans_part = (
+            f', each with a translation into the language with code "{translation_lang}"'
+            if translation_lang else ""
+        )
+        trans_field = ', "translation": "<translation>"' if translation_lang else ""
+        prompt = (
+            f'You are a language learning assistant. '
+            f'Write {count} different short, natural sentences in the language with code "{learning_lang}" '
+            f'that each use or illustrate the word or phrase "{word}"{trans_part}. '
+            f'Respond with ONLY a valid JSON array, no extra text: '
+            f'[{{"learning": "<sentence 1>"{trans_field}}}, ...]'
+        )
     payload = json.dumps({
         "model": cfg["model"],
         "messages": [{"role": "user", "content": prompt}],
@@ -251,12 +265,22 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
                 content = raw_content.strip()
                 if "```" in content:
                     content = re.sub(r"```(?:json)?", "", content).strip()
-                # Robust JSON extraction: find outermost {...} block
-                start = content.find("{")
-                end = content.rfind("}")
-                if start != -1 and end > start:
-                    content = content[start:end + 1]
-                return json.loads(content)
+                # Extract outermost [...] or {...}
+                arr_start = content.find("[")
+                obj_start = content.find("{")
+                if arr_start != -1 and (obj_start == -1 or arr_start < obj_start):
+                    end = content.rfind("]")
+                    parsed = json.loads(content[arr_start:end + 1]) if end > arr_start else json.loads(content)
+                    if isinstance(parsed, dict):
+                        parsed = [parsed]
+                else:
+                    end = content.rfind("}")
+                    parsed = json.loads(content[obj_start:end + 1] if obj_start != -1 and end > obj_start else content)
+                    if isinstance(parsed, dict):
+                        parsed = [parsed]
+                if not parsed or "learning" not in parsed[0]:
+                    raise ValueError("LLM response missing 'learning' field.")
+                return parsed
             except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
                 print(f"[LLM] attempt {attempt+1} parse error: {type(e).__name__}: {e} | raw: {str(data)[:300]}", file=sys.stderr, flush=True)
                 last_exc = e
@@ -592,16 +616,15 @@ def suggest():
     word = str(data.get("word", "")).strip()
     learning_lang = str(data.get("learning_lang", "")).strip()
     translation_lang = str(data.get("translation_lang", "")).strip()
+    count = max(1, min(10, int(data.get("count", 1) or 1)))
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
     try:
-        result = _call_llm(cfg, word, learning_lang, translation_lang)
-        if "learning" not in result:
-            raise ValueError("LLM response missing 'learning' field.")
+        pairs = _call_llm(cfg, word, learning_lang, translation_lang, count)
         if not g.is_su and LLM_SUGGEST_COOLDOWN:
             with _last_suggest_time_lock:
                 _last_suggest_time[g.username or "_anon_"] = time.monotonic()
-        return jsonify(result)
+        return jsonify({"pairs": pairs})
     except urllib.error.HTTPError as e:
         body = ""
         try:

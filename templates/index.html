@@ -778,6 +778,9 @@
                     <div style="display:flex;gap:8px;align-items:center">
                         <input type="text" id="ai-word" placeholder="word or collocation&hellip; e.g. commute, run fast"
                             style="flex:1" />
+                        <input type="number" id="ai-count" min="1" max="10" value="1"
+                            title="Number of pairs to generate"
+                            style="width:52px;padding:9px 6px;text-align:center" />
                         <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;width:auto"
                             onclick="aiSuggest(this)">Generate</button>
                         <div id="ai-spinner"
@@ -1080,6 +1083,7 @@
                 const word = document.getElementById('ai-word').value.trim();
                 const learningLang = document.getElementById('manual-learning-lang').value.trim();
                 const translationLang = document.getElementById('manual-translation-lang').value.trim();
+                const count = Math.max(1, Math.min(10, parseInt(document.getElementById('ai-count').value) || 1));
                 const errEl = document.getElementById('ai-error');
                 errEl.style.display = 'none';
                 if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
@@ -1090,7 +1094,7 @@
                     const res = await fetch('/suggest', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang }),
+                        body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang, count }),
                     });
                     const data = await res.json();
                     if (!res.ok) {
@@ -1100,15 +1104,22 @@
                         document.getElementById('ai-spinner').style.display = 'none';
                         return;
                     }
-                    // Reuse the last row if it is empty, otherwise add a new one
-                    const existingRows = document.querySelectorAll('.manual-pair-row');
-                    const lastRow = existingRows[existingRows.length - 1];
-                    const lastIsEmpty = lastRow && !lastRow.querySelector('.manual-learning').value.trim();
-                    if (!lastIsEmpty) addManualRow();
-                    const rows = document.querySelectorAll('.manual-pair-row');
-                    const last = rows[rows.length - 1];
-                    last.querySelector('.manual-learning').value = data.learning || '';
-                    if (data.translation) last.querySelector('.manual-translation').value = data.translation;
+                    const pairs = data.pairs || [];
+                    pairs.forEach((pair, idx) => {
+                        if (idx === 0) {
+                            // Reuse the last empty row for the first pair
+                            const existingRows = document.querySelectorAll('.manual-pair-row');
+                            const lastRow = existingRows[existingRows.length - 1];
+                            const lastIsEmpty = lastRow && !lastRow.querySelector('.manual-learning').value.trim();
+                            if (!lastIsEmpty) addManualRow();
+                        } else {
+                            addManualRow();
+                        }
+                        const rows = document.querySelectorAll('.manual-pair-row');
+                        const last = rows[rows.length - 1];
+                        last.querySelector('.manual-learning').value = pair.learning || '';
+                        if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
+                    });
                     // Word field intentionally kept — allows generating another pair with the same word
                     document.getElementById('ai-word').select();
                     if (!IS_SU && SUGGEST_COOLDOWN_SECONDS) {
