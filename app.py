@@ -233,25 +233,34 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
             if e.code >= 500:
                 continue  # retry on server errors
             raise  # 4xx (non-429) are client errors — don't retry
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
             print(f"[LLM] attempt {attempt+1} transient error: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
             last_exc = e
-            continue  # retry on network/timeout/parse errors
+            continue  # retry on network/timeout errors
         else:
-            # successful HTTP response — parse and return
-            choice = data["choices"][0]
-            finish = choice.get("finish_reason")
-            msg = choice["message"]
-            raw_content = msg.get("content") or msg.get("reasoning")
-            if not raw_content:
-                print(f"[LLM] null content finish_reason={finish}", file=sys.stderr, flush=True)
-                hint = " (token limit hit during reasoning — raise LLM_MAX_TOKENS)" if finish == "length" else ""
-                raise ValueError(f"LLM returned no usable content{hint}.")
-            content = raw_content.strip()
-            if "```" in content:
-                content = re.sub(r"```(?:json)?", "", content).strip()
-            m = re.search(r"\{[^}]+\}", content, re.DOTALL)
-            return json.loads(m.group() if m else content)
+            # successful HTTP response — parse and return (inside else so parse errors also retry)
+            try:
+                choice = data["choices"][0]
+                finish = choice.get("finish_reason")
+                msg = choice["message"]
+                raw_content = msg.get("content") or msg.get("reasoning")
+                if not raw_content:
+                    print(f"[LLM] null content finish_reason={finish}", file=sys.stderr, flush=True)
+                    hint = " (token limit hit during reasoning — raise LLM_MAX_TOKENS)" if finish == "length" else ""
+                    raise ValueError(f"LLM returned no usable content{hint}.")
+                content = raw_content.strip()
+                if "```" in content:
+                    content = re.sub(r"```(?:json)?", "", content).strip()
+                # Robust JSON extraction: find outermost {...} block
+                start = content.find("{")
+                end = content.rfind("}")
+                if start != -1 and end > start:
+                    content = content[start:end + 1]
+                return json.loads(content)
+            except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
+                print(f"[LLM] attempt {attempt+1} parse error: {type(e).__name__}: {e} | raw: {str(data)[:300]}", file=sys.stderr, flush=True)
+                last_exc = e
+                continue  # retry on bad/truncated output
 
     raise last_exc
 
