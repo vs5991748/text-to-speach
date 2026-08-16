@@ -72,25 +72,39 @@ No API key required. The app calls Ollama's OpenAI-compatible endpoint locally.
 
 ---
 
-## Per-user provider assignment
+## Per-role provider assignment
 
-By default every user uses the provider named in `LLM_DEFAULT`. Override it per user:
+LLM providers are assigned by **role**, not by username — so adding or removing users from `USERS`/`SU_USERS` never requires touching LLM config.
 
 ```dotenv
-LLM_DEFAULT=openrouter          # fallback for all users
-
-LLM_USER_ADMIN=groq             # admin gets Groq
-LLM_USER_BOB=ollama             # bob uses local Ollama
-                                # alice (not listed) → default (openrouter)
+LLM_DEFAULT=openrouter      # all regular users (USERS)
+LLM_SU_DEFAULT=groq         # all superusers (SU_USERS); falls back to LLM_DEFAULT if blank
 ```
 
-The key format is `LLM_USER_<USERNAME_IN_UPPERCASE>`. Superusers and regular users can both be assigned.
+**Resolution order for each request:**
+1. `LLM_USER_<USERNAME>` — optional per-user override (edge cases only)
+2. `LLM_SU_DEFAULT` — if the user is a superuser and this is set
+3. `LLM_DEFAULT` — global fallback
 
-To **disable** AI suggestions for a specific user — assign them a provider whose `MODEL` is blank:
+### Example: admins get Groq, everyone else gets OpenRouter
 
 ```dotenv
-LLM_USER_BOB=groq
-LLM_GROQ_MODEL=               # ← blank disables it
+LLM_DEFAULT=openrouter
+LLM_OPENROUTER_API_KEY=sk-or-...
+LLM_OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
+
+LLM_SU_DEFAULT=groq
+LLM_GROQ_API_KEY=gsk_...
+LLM_GROQ_MODEL=llama-3.1-8b-instant
+```
+
+### Example: disable AI for regular users, enable only for admins
+
+```dotenv
+LLM_DEFAULT=           # blank = disabled for regular users
+LLM_SU_DEFAULT=groq
+LLM_GROQ_API_KEY=gsk_...
+LLM_GROQ_MODEL=llama-3.1-8b-instant
 ```
 
 ---
@@ -109,8 +123,9 @@ LLM_DEFAULT=
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_DEFAULT` | `openrouter` | Provider used when no per-user override is set. Blank = disabled. |
-| `LLM_USER_<USERNAME>` | *(none)* | Per-user provider override, e.g. `LLM_USER_ADMIN=groq` |
+| `LLM_DEFAULT` | `openrouter` | Provider for all regular users (`USERS`). Blank = disabled. |
+| `LLM_SU_DEFAULT` | *(blank)* | Provider for superusers (`SU_USERS`). Falls back to `LLM_DEFAULT` if blank. |
+| `LLM_USER_<USERNAME>` | *(none)* | Per-user override (edge cases). Takes priority over role defaults. |
 | `LLM_OPENROUTER_MODEL` | `meta-llama/llama-3.1-8b-instruct:free` | OpenRouter model ID |
 | `LLM_OPENROUTER_API_KEY` | *(required)* | OpenRouter API key |
 | `LLM_OPENROUTER_BASE_URL` | `https://openrouter.ai/api` | Override only if using a proxy |

@@ -39,8 +39,9 @@ RATE_LIMIT_WINDOW = _limit("RATE_LIMIT_WINDOW_SECONDS", 60)
 GENERATION_TIMEOUT = _limit("GENERATION_TIMEOUT_SECONDS", 600)
 GENERATION_COOLDOWN = _limit("GENERATION_COOLDOWN_SECONDS", 60)
 
-# Default provider name for all users (overridable per-user via LLM_USER_<USERNAME>)
+# Default provider for all users; SU users can get a separate default
 LLM_DEFAULT = os.getenv("LLM_DEFAULT", "openrouter").strip().lower()
+LLM_SU_DEFAULT = os.getenv("LLM_SU_DEFAULT", "").strip().lower()
 
 # Built-in base URLs; override with LLM_<PROVIDER>_BASE_URL
 _LLM_DEFAULT_URLS = {
@@ -55,22 +56,33 @@ _LLM_DEFAULT_MODELS = {
 }
 
 
-def _llm_config_for(username) -> Optional[dict]:
-    """Return {model, api_key, base_url} for the user's assigned provider, or None."""
-    provider = ""
-    if username:
-        provider = os.getenv(f"LLM_USER_{username.upper()}", "").strip().lower()
-    if not provider:
-        provider = LLM_DEFAULT
-    if not provider:
+def _resolve_provider(name: str) -> Optional[dict]:
+    """Resolve a named provider to its {model, api_key, base_url} config, or None."""
+    if not name:
         return None
-    prefix = f"LLM_{provider.upper()}"
-    model = os.getenv(f"{prefix}_MODEL", _LLM_DEFAULT_MODELS.get(provider, "")).strip()
+    prefix = f"LLM_{name.upper()}"
+    model = os.getenv(f"{prefix}_MODEL", _LLM_DEFAULT_MODELS.get(name, "")).strip()
     api_key = os.getenv(f"{prefix}_API_KEY", "").strip()
-    base_url = os.getenv(f"{prefix}_BASE_URL", _LLM_DEFAULT_URLS.get(provider, "")).rstrip("/")
-    if not model or not base_url:
-        return None
-    return {"model": model, "api_key": api_key, "base_url": base_url}
+    base_url = os.getenv(f"{prefix}_BASE_URL", _LLM_DEFAULT_URLS.get(name, "")).rstrip("/")
+    return {"model": model, "api_key": api_key, "base_url": base_url} if model and base_url else None
+
+
+def _llm_config_for(username, is_su: bool = False) -> Optional[dict]:
+    """Resolve LLM config: per-user override → role default → global default."""
+    # 1. Optional per-user override (edge cases only)
+    if username:
+        override = os.getenv(f"LLM_USER_{username.upper()}", "").strip().lower()
+        if override:
+            cfg = _resolve_provider(override)
+            if cfg:
+                return cfg
+    # 2. Role-based default
+    if is_su and LLM_SU_DEFAULT:
+        cfg = _resolve_provider(LLM_SU_DEFAULT)
+        if cfg:
+            return cfg
+    # 3. Global default
+    return _resolve_provider(LLM_DEFAULT)
 
 
 def _parse_users(env_var: str, is_su: bool) -> dict:
@@ -228,12 +240,12 @@ def index():
                            known_langs=sorted(LANG_VOICES.keys()),
                            known_voices=LANG_VOICES,
                            is_su=g.is_su,
-                           llm_enabled=bool(_llm_config_for(g.username)),
+                           llm_enabled=bool(_llm_config_for(g.username, g.is_su)),
                            llm_lock_reason=(
-                               None if _llm_config_for(g.username)
+                               None if _llm_config_for(g.username, g.is_su)
                                else ("No LLM provider is configured on this server."
                                      if not LLM_DEFAULT
-                                     else "Your account is not assigned to a configured LLM provider.")
+                                     else "AI phrase generation is not configured for your role.")
                            ),
                            max_rows=MAX_ROWS,
                            max_rows_per_window=MAX_ROWS_PER_WINDOW,
@@ -495,7 +507,7 @@ def status(job_id):
 
 @app.route("/suggest", methods=["POST"])
 def suggest():
-    cfg = _llm_config_for(g.username)
+    cfg = _llm_config_for(g.username, g.is_su)
     if not cfg:
         return jsonify({"error": "AI suggestions are not configured for your account."}), 503
     if not g.is_su and _is_rate_limited(g.username):
