@@ -10,6 +10,9 @@ LANG_VOICES = {
     "ro": "ro-RO-EmilNeural",
     "en": "en-US-AriaNeural",
     "uk": "uk-UA-PolinaNeural",
+    "ru": "ru-RU-SvetlanaNeural",
+    "pl": "pl-PL-ZofiaNeural",
+    "pt": "pt-BR-FranciscaNeural",
 }
 
 
