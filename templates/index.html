@@ -992,6 +992,14 @@
                     document.getElementById('ptab-' + t).classList.toggle('active', t === name);
                     document.getElementById('panel-' + t).style.display = t === name ? '' : 'none';
                 });
+                // Returning to Source: restore manual pairs editor if pairs exist
+                if (name === 'source' && activeTab === 'manual') {
+                    const hasPairs = document.querySelectorAll('.manual-pair-row').length > 0;
+                    if (hasPairs) {
+                        document.getElementById('manual-panel').style.display = '';
+                        document.getElementById('file-info').style.display = 'none';
+                    }
+                }
             }
             function _enablePageTab(name) { document.getElementById('ptab-' + name).disabled = false; }
             function _disablePageTab(name) { document.getElementById('ptab-' + name).disabled = true; }
