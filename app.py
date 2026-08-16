@@ -212,7 +212,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
         "model": cfg["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.8,
-        "max_tokens": LLM_MAX_TOKENS,
+        "max_tokens": max(LLM_MAX_TOKENS, count * 200),
     }).encode()
     headers = {"Content-Type": "application/json"}
     if cfg["api_key"]:
