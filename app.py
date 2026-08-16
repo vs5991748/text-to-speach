@@ -208,12 +208,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
             f'Respond with ONLY a valid JSON array, no extra text: '
             f'[{{"learning": "<sentence 1>"{trans_field}}}, ...]'
         )
-    payload = json.dumps({
-        "model": cfg["model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.8,
-        "max_tokens": max(LLM_MAX_TOKENS, count * 200),
-    }).encode()
+    base_max_tokens = max(LLM_MAX_TOKENS, count * 200)
     headers = {"Content-Type": "application/json"}
     if cfg["api_key"]:
         headers["Authorization"] = f"Bearer {cfg['api_key']}"
@@ -221,11 +216,18 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
         print(f"[LLM] WARNING: no API key set for {cfg['base_url']}", file=sys.stderr, flush=True)
 
     last_exc: Exception = RuntimeError("No attempts made")
+    current_max_tokens = base_max_tokens
     for attempt in range(LLM_MAX_RETRIES + 1):
         if attempt > 0:
             wait = 2 ** (attempt - 1)  # 1 s, 2 s, 4 s …
-            print(f"[LLM] retry {attempt}/{LLM_MAX_RETRIES} in {wait}s", file=sys.stderr, flush=True)
+            print(f"[LLM] retry {attempt}/{LLM_MAX_RETRIES} in {wait}s max_tokens={current_max_tokens}", file=sys.stderr, flush=True)
             time.sleep(wait)
+        payload = json.dumps({
+            "model": cfg["model"],
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.8,
+            "max_tokens": current_max_tokens,
+        }).encode()
         try:
             req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=LLM_TIMEOUT) as resp:
@@ -292,6 +294,10 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
             except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
                 print(f"[LLM] attempt {attempt+1} parse error: {type(e).__name__}: {e} | raw: {str(data)[:300]}", file=sys.stderr, flush=True)
                 last_exc = e
+                # Double token budget on length cutoff so next attempt has more room
+                if data.get("choices") and data["choices"][0].get("finish_reason") == "length":
+                    current_max_tokens *= 2
+                    print(f"[LLM] length cutoff — doubling max_tokens to {current_max_tokens}", file=sys.stderr, flush=True)
                 continue  # retry on bad/truncated output
 
     raise last_exc
