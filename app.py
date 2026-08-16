@@ -45,6 +45,8 @@ LLM_SUGGEST_COOLDOWN = _limit("LLM_SUGGEST_COOLDOWN_SECONDS", 60)
 LLM_DEFAULT = os.getenv("LLM_DEFAULT", "openrouter").strip().lower()
 LLM_SU_DEFAULT = os.getenv("LLM_SU_DEFAULT", "").strip().lower()
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", 600) or 600)
+LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT_SECONDS", 60) or 60)
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", 3) or 3)
 
 # Built-in base URLs; override with LLM_<PROVIDER>_BASE_URL
 _LLM_DEFAULT_URLS = {
@@ -172,7 +174,7 @@ ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
 def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -> dict:
-    """Call an OpenAI-compatible LLM and return {learning, translation} pair."""
+    """Call an OpenAI-compatible LLM with retry/backoff. Returns {learning, translation}."""
     url = f"{cfg['base_url']}/v1/chat/completions"
     print(f"[LLM] POST {url} model={cfg['model']} word={word!r}", file=sys.stderr, flush=True)
     trans_part = (
@@ -199,23 +201,59 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str) -
         headers["Authorization"] = f"Bearer {cfg['api_key']}"
     else:
         print(f"[LLM] WARNING: no API key set for {cfg['base_url']}", file=sys.stderr, flush=True)
-    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = json.loads(resp.read())
-    choice = data["choices"][0]
-    finish = choice.get("finish_reason")
-    msg = choice["message"]
-    # Reasoning models put output in 'content'; fall back to 'reasoning' if content is null
-    raw_content = msg.get("content") or msg.get("reasoning")
-    if not raw_content:
-        print(f"[LLM] null content finish_reason={finish} response: {json.dumps(data)[:500]}", file=sys.stderr, flush=True)
-        hint = " (model hit token limit during reasoning — increase max_tokens or use a non-reasoning model)" if finish == "length" else ""
-        raise ValueError(f"LLM returned no usable content{hint}.")
-    content = raw_content.strip()
-    if "```" in content:
-        content = re.sub(r"```(?:json)?", "", content).strip()
-    m = re.search(r"\{[^}]+\}", content, re.DOTALL)
-    return json.loads(m.group() if m else content)
+
+    last_exc: Exception = RuntimeError("No attempts made")
+    for attempt in range(LLM_MAX_RETRIES + 1):
+        if attempt > 0:
+            wait = 2 ** (attempt - 1)  # 1 s, 2 s, 4 s …
+            print(f"[LLM] retry {attempt}/{LLM_MAX_RETRIES} in {wait}s", file=sys.stderr, flush=True)
+            time.sleep(wait)
+        try:
+            req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=LLM_TIMEOUT) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            body = ""
+            try:
+                body = e.read().decode("utf-8", errors="replace")[:500]
+            except Exception:
+                pass
+            print(f"[LLM] attempt {attempt+1} HTTP {e.code} {e.reason}: {body}", file=sys.stderr, flush=True)
+            last_exc = e
+            if e.code == 429:
+                # honour Retry-After if provided
+                retry_after = e.headers.get("Retry-After")
+                try:
+                    wait = int(retry_after)
+                except (TypeError, ValueError):
+                    wait = 2 ** attempt
+                print(f"[LLM] rate-limited — waiting {wait}s", file=sys.stderr, flush=True)
+                time.sleep(wait)
+                continue
+            if e.code >= 500:
+                continue  # retry on server errors
+            raise  # 4xx (non-429) are client errors — don't retry
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
+            print(f"[LLM] attempt {attempt+1} transient error: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+            last_exc = e
+            continue  # retry on network/timeout/parse errors
+        else:
+            # successful HTTP response — parse and return
+            choice = data["choices"][0]
+            finish = choice.get("finish_reason")
+            msg = choice["message"]
+            raw_content = msg.get("content") or msg.get("reasoning")
+            if not raw_content:
+                print(f"[LLM] null content finish_reason={finish}", file=sys.stderr, flush=True)
+                hint = " (token limit hit during reasoning — raise LLM_MAX_TOKENS)" if finish == "length" else ""
+                raise ValueError(f"LLM returned no usable content{hint}.")
+            content = raw_content.strip()
+            if "```" in content:
+                content = re.sub(r"```(?:json)?", "", content).strip()
+            m = re.search(r"\{[^}]+\}", content, re.DOTALL)
+            return json.loads(m.group() if m else content)
+
+    raise last_exc
 
 
 def _is_rate_limited(username: str) -> bool:
