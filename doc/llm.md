@@ -129,37 +129,33 @@ LLM_SUGGEST_COOLDOWN_SECONDS=0
 
 ## LLM_MAX_TOKENS — controlling response length
 
-`max_tokens` caps the number of tokens the model may generate in a single response.
+`LLM_MAX_TOKENS` sets the **minimum** token budget. The actual value sent to the API scales automatically with the number of pairs requested:
 
-**Why it matters for reasoning models** — models like `openai/gpt-oss`, `deepseek/deepseek-r1`, or any `o1`-style model spend tokens on internal *reasoning* before writing the actual answer. With the default of 600, a reasoning model can easily exhaust the budget while still thinking, leaving `content: null` or truncated JSON in the response. For these models, set a higher value.
+```
+actual_max_tokens = max(LLM_MAX_TOKENS, count × 200)
+```
 
-**Why it matters when generating multiple pairs** — asking the AI phrase generator to produce 5 or 10 pairs at once multiplies the output length. Budget roughly 50–80 tokens per sentence pair on top of any reasoning overhead.
+So `LLM_MAX_TOKENS=600` means: at least 600 tokens, but automatically 1 000 for 5 pairs, 2 000 for 10 pairs, etc.
+
+**Why it matters for reasoning models** — models like `openai/gpt-oss`, `deepseek/deepseek-r1`, or any `o1`-style model spend tokens on internal *reasoning* before writing the actual answer. With the default of 600, a reasoning model can exhaust the budget during reasoning before producing any output. Set a higher floor to cover the reasoning overhead.
 
 **.env**
 ```dotenv
-# Standard chat model, 1–3 pairs
+# Standard chat model (gemma, mistral, llama, …) — auto-scales fine from this base
 LLM_MAX_TOKENS=600
 
-# Reasoning / thinking model (gpt-oss, deepseek-r1, o1, …), 1 pair
+# Reasoning / thinking model (gpt-oss, deepseek-r1, o1, …) — needs more headroom for internal reasoning
 LLM_MAX_TOKENS=1500
-
-# Reasoning model, 5–10 pairs
-LLM_MAX_TOKENS=3000
-
-# Any model, 10 pairs
-LLM_MAX_TOKENS=2000
 ```
 
-| Scenario | Recommended `LLM_MAX_TOKENS` |
-|---|---|
-| Standard chat model (gemma, mistral, llama), 1–3 pairs | `600` |
-| Reasoning model (gpt-oss, deepseek-r1, o1), 1 pair | `1500` |
-| Reasoning model, 5–10 pairs | `3000` |
-| Any model, 10 pairs | `2000`+ |
+| Model type | Recommended floor | Effective tokens at count=1/5/10 |
+|---|---|---|
+| Standard chat (gemma, mistral, llama) | `600` | 600 / 1 000 / 2 000 |
+| Reasoning / thinking models | `1500` | 1 500 / 1 500 / 2 000 |
 
 > **Tip:** For multi-pair generation, non-reasoning models (e.g. `google/gemma-2-9b-it:free` on OpenRouter, or `llama-3.1-8b-instant` on Groq) are faster and use far fewer tokens than reasoning models. Reserve reasoning models for single-pair generation where quality matters most.
 
-**What happens when the limit is too low:**
+**What happens when the floor is too low for a reasoning model:**
 ```
 [LLM] attempt 1 parse error: JSONDecodeError: Expecting value … finish_reason=length
 LLM error: LLM returned no usable content (token limit hit during reasoning — raise LLM_MAX_TOKENS)
@@ -175,7 +171,7 @@ LLM error: LLM returned no usable content (token limit hit during reasoning — 
 | `LLM_SU_DEFAULT` | *(blank)* | Provider for superusers (`SU_USERS`). Falls back to `LLM_DEFAULT` if blank. |
 | `LLM_USER_<USERNAME>` | *(none)* | Per-user override (edge cases). Takes priority over role defaults. |
 | `LLM_SUGGEST_COOLDOWN_SECONDS` | `60` | Seconds a regular user must wait between AI phrase requests (0 = disabled). SU users are exempt. |
-| `LLM_MAX_TOKENS` | `600` | Max tokens per LLM response. Increase to `1500`+ for reasoning/thinking models. |
+| `LLM_MAX_TOKENS` | `600` | Minimum token budget per LLM response. Actual value sent = `max(LLM_MAX_TOKENS, count × 200)`. Increase for reasoning/thinking models. |
 | `LLM_OPENROUTER_MODEL` | `google/gemma-2-9b-it:free` | OpenRouter model ID |
 | `LLM_OPENROUTER_API_KEY` | *(required)* | OpenRouter API key |
 | `LLM_OPENROUTER_BASE_URL` | `https://openrouter.ai/api` | Override only if using a proxy |
