@@ -762,17 +762,18 @@
                         <select id="manual-learning-lang"
                             onchange="localStorage.setItem('tts_learning_lang', this.value); _enforceDifferentLangs('learning')">
                             {% for lang in known_langs %}
-                            <option value="{{ lang }}">{{ lang }}</option>
+                            <option value="{{ lang }}">{{ lang_names.get(lang, lang) }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="field">
-                        <label for="manual-translation-lang">Translation language <span class="hint" style="font-weight:400">(optional)</span></label>
+                        <label for="manual-translation-lang">Translation language <span class="hint"
+                                style="font-weight:400">(optional)</span></label>
                         <select id="manual-translation-lang"
                             onchange="localStorage.setItem('tts_translation_lang', this.value); updateManualTranslationVisibility(); _enforceDifferentLangs('translation')">
                             <option value="">&mdash; none &mdash;</option>
                             {% for lang in known_langs %}
-                            <option value="{{ lang }}">{{ lang }}</option>
+                            <option value="{{ lang }}">{{ lang_names.get(lang, lang) }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -787,7 +788,8 @@
                         <input type="text" id="ai-word" placeholder="word or collocation&hellip; e.g. commute, run fast"
                             style="flex:1" />
                         <input type="number" id="ai-count" min="1" max="5" value="1"
-                            title="Number of pairs to generate (max 5)" style="width:52px;padding:9px 6px;text-align:center" />
+                            title="Number of pairs to generate (max 5)"
+                            style="width:52px;padding:9px 6px;text-align:center" />
                         <button class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;width:auto"
                             onclick="aiSuggest(this)">Generate</button>
                         <div id="ai-spinner"

@@ -15,6 +15,15 @@ LANG_VOICES = {
     "pt": "pt-BR-FranciscaNeural",
 }
 
+LANG_NAMES = {
+    "ro": "Română",
+    "en": "English",
+    "uk": "Українська",
+    "ru": "Русский",
+    "pl": "Polski",
+    "pt": "Português",
+}
+
 
 def synthesize(text: str, voice: str, speed: float, out_path: str) -> None:
     """speed is a multiplier: 1.0 normal, 0.8 = 20% slower, 1.2 = 20% faster."""

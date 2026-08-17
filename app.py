@@ -112,7 +112,7 @@ if not _users:
     warnings.warn("No users configured (USERS / SU_USERS) — authentication is disabled.", stacklevel=1)
 
 from generate_audio import build_split_tracks, build_track, load_pairs, parse_voice_overrides, resolve_voice, _slugify, _slice_pairs
-from tts_engines import LANG_VOICES
+from tts_engines import LANG_VOICES, LANG_NAMES
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB upload limit
@@ -341,6 +341,7 @@ def _check_extension(filename: str) -> Optional[str]:
 def index():
     return render_template("index.html",
                            known_langs=sorted(LANG_VOICES.keys()),
+                           lang_names=LANG_NAMES,
                            known_voices=LANG_VOICES,
                            is_su=g.is_su,
                            llm_enabled=bool(_llm_config_for(g.username, g.is_su)),
