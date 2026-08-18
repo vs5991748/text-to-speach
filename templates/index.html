@@ -805,14 +805,35 @@
                             style="background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;padding:0">▶ Prompt options</button>
                         <div style="display:none;margin-top:8px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
                             <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Checked options are added to the prompt as extra instructions.</div>
-                            <div id="ai-prompt-options" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Use a variety of verb tenses (present, past, future, conditional)." /> Use all verb tenses</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Make all sentences negative." /> Only negative sentences</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Mix affirmative and negative sentences." /> Mix negative/affirmative</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Include some questions among the sentences." /> Include questions</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Demonstrate grammatical gender agreement and declension where applicable." /> Show gender/declension</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Use formal/polite register." /> Formal register</label>
-                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Use informal/colloquial language." /> Informal/colloquial</label>
+                            <div id="ai-prompt-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Use a variety of verb tenses (present, past, future, conditional)." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Use all verb tenses</span><br><span style="font-size:.76rem;color:var(--muted)">Each sentence uses a different tense — past, present, future, conditional.</span></span>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Make all sentences negative." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Only negative sentences</span><br><span style="font-size:.76rem;color:var(--muted)">All sentences use negation (e.g. "I don't remember", "She didn't forget").</span></span>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Mix affirmative and negative sentences." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Mix negative/affirmative</span><br><span style="font-size:.76rem;color:var(--muted)">Some sentences are positive, some negative — useful for contrast practice.</span></span>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Include some questions among the sentences." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Include questions</span><br><span style="font-size:.76rem;color:var(--muted)">Some sentences are formed as questions — good for interrogative word order practice.</span></span>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Demonstrate grammatical gender agreement and declension where applicable." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Show grammatical forms</span><br><span style="font-size:.76rem;color:var(--muted)">Sentences highlight how word endings change by gender or case (most useful for Romanian, Russian, Ukrainian, Polish).</span></span>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Use formal/polite register." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Formal register</span><br><span style="font-size:.76rem;color:var(--muted)">Polite, formal language — suitable for business or official contexts.</span></span>
+                                </label>
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                                    <input type="checkbox" value="Use informal/colloquial language." style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Informal/colloquial</span><br><span style="font-size:.76rem;color:var(--muted)">Everyday conversational language, contractions, and informal phrasing.</span></span>
+                                </label>
                             </div>
                             <input type="text" id="ai-custom-instruction" placeholder="Custom instruction… e.g. use diminutives"
                                 style="width:100%" />
