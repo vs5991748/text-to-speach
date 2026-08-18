@@ -183,7 +183,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
     print(f"[LLM] POST {url} model={cfg['model']} word={word!r} count={count}", file=sys.stderr, flush=True)
     extra = f" Additional requirements: {instructions.strip()}" if instructions.strip() else ""
     if count == 0:
-        # Unconstrained — LLM decides quantity based on the instructions
+        # Unconstrained — quantity driven entirely by the extra instruction
         trans_part = (
             f', each with a translation into the language with code "{translation_lang}"'
             if translation_lang else ""
@@ -191,10 +191,11 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
         trans_field = ', "translation": "<translation>"' if translation_lang else ""
         prompt = (
             f'You are a language learning assistant. '
-            f'Using the word or phrase "{word}" in the language with code "{learning_lang}"{trans_part}, '
-            f'generate as many sentences as needed.{extra} '
-            f'Respond with ONLY a valid JSON array, no extra text: '
-            f'[{{"learning": "<sentence>"{trans_field}}}, ...]'
+            f'Your task: {extra} '
+            f'Use the word or phrase "{word}" in every sentence, written in the language with code "{learning_lang}"{trans_part}. '
+            f'You MUST produce MULTIPLE sentences — one per required variation. '
+            f'Respond with ONLY a valid JSON array containing ALL generated sentences, no extra text: '
+            f'[{{"learning": "<sentence 1>"{trans_field}}}, {{"learning": "<sentence 2>"{trans_field}}}, ...]'
         )
         base_max_tokens = max(LLM_MAX_TOKENS * 3, 3000)
     elif count == 1:
