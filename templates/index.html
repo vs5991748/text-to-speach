@@ -801,48 +801,87 @@
 
                     <!-- Prompt options (collapsible) -->
                     <div style="margin-top:10px">
-                        <button type="button" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'; this.textContent=this.textContent.startsWith('▶')?'▼ Prompt options':'▶ Prompt options'"
-                            style="background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;padding:0">▶ Prompt options</button>
-                        <div style="display:none;margin-top:8px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
-                            <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Checked options are added to the prompt as extra instructions.</div>
-                            <div id="ai-prompt-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+                        <button type="button"
+                            onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'; this.textContent=this.textContent.startsWith('▶')?'▼ Prompt options':'▶ Prompt options'"
+                            style="background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;padding:0">▶
+                            Prompt options</button>
+                        <div
+                            style="display:none;margin-top:8px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+                            <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Checked options are added
+                                to the prompt as extra instructions.</div>
+                            <div id="ai-prompt-options"
+                                style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" id="ai-opt-tenses" value="Generate one sentence per major verb tense (present, past simple, past perfect, future, conditional, imperative — one tense each)." style="margin-top:3px;flex-shrink:0"
-                                        onchange="_toggleAutoCount(this)" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">One sentence per tense</span><br><span style="font-size:.76rem;color:var(--muted)">Generates one sentence per major tense (present, past, future, conditional, imperative). The LLM decides the quantity — count input is hidden.</span></span>
+                                    <input type="checkbox" id="ai-opt-tenses"
+                                        value="Generate one sentence per major verb tense (present, past simple, past perfect, future, conditional, imperative — one tense each)."
+                                        style="margin-top:3px;flex-shrink:0" onchange="_toggleAutoCount(this)" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">One sentence per
+                                            tense</span><br><span style="font-size:.76rem;color:var(--muted)">Generates
+                                            one sentence per major tense (present, past, future, conditional,
+                                            imperative). The LLM decides the quantity — count input is
+                                            hidden.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Make all sentences negative." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Only negative sentences</span><br><span style="font-size:.76rem;color:var(--muted)">All sentences use negation (e.g. "I don't remember", "She didn't forget").</span></span>
+                                    <input type="checkbox" value="Make all sentences negative."
+                                        style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Only negative
+                                            sentences</span><br><span style="font-size:.76rem;color:var(--muted)">All
+                                            sentences use negation (e.g. "I don't remember", "She didn't
+                                            forget").</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Mix affirmative and negative sentences." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Mix negative/affirmative</span><br><span style="font-size:.76rem;color:var(--muted)">Some sentences are positive, some negative — useful for contrast practice.</span></span>
+                                    <input type="checkbox" value="Mix affirmative and negative sentences."
+                                        style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Mix
+                                            negative/affirmative</span><br><span
+                                            style="font-size:.76rem;color:var(--muted)">Some sentences are positive,
+                                            some negative — useful for contrast practice.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Include some questions among the sentences." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Include questions</span><br><span style="font-size:.76rem;color:var(--muted)">Some sentences are formed as questions — good for interrogative word order practice.</span></span>
+                                    <input type="checkbox" value="Include some questions among the sentences."
+                                        style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Include
+                                            questions</span><br><span style="font-size:.76rem;color:var(--muted)">Some
+                                            sentences are formed as questions — good for interrogative word order
+                                            practice.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Each sentence must clearly demonstrate a different grammatical form: vary gender (masculine, feminine, neuter), case (nominative, accusative, dative, genitive), and number (singular, plural) across sentences." style="margin-top:3px;flex-shrink:0"
-                                        onchange="_toggleAutoCount(this)" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Show grammatical forms</span><br><span style="font-size:.76rem;color:var(--muted)">Each sentence demonstrates a different grammatical form — gender, case, or number. The LLM decides the quantity — count input is hidden.</span></span>
+                                    <input type="checkbox"
+                                        value="Each sentence must clearly demonstrate a different grammatical form: vary gender (masculine, feminine, neuter), case (nominative, accusative, dative, genitive), and number (singular, plural) across sentences."
+                                        style="margin-top:3px;flex-shrink:0" onchange="_toggleAutoCount(this)" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Show grammatical
+                                            forms</span><br><span style="font-size:.76rem;color:var(--muted)">Each
+                                            sentence demonstrates a different grammatical form — gender, case, or
+                                            number. The LLM decides the quantity — count input is hidden.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Use formal/polite register." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Formal register</span><br><span style="font-size:.76rem;color:var(--muted)">Polite, formal language — suitable for business or official contexts.</span></span>
+                                    <input type="checkbox" value="Use formal/polite register."
+                                        style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Formal
+                                            register</span><br><span style="font-size:.76rem;color:var(--muted)">Polite,
+                                            formal language — suitable for business or official contexts.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Use informal/colloquial language." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Informal/colloquial</span><br><span style="font-size:.76rem;color:var(--muted)">Everyday conversational language, contractions, and informal phrasing.</span></span>
+                                    <input type="checkbox" value="Use informal/colloquial language."
+                                        style="margin-top:3px;flex-shrink:0" />
+                                    <span><span
+                                            style="font-size:.84rem;color:var(--text)">Informal/colloquial</span><br><span
+                                            style="font-size:.76rem;color:var(--muted)">Everyday conversational
+                                            language, contractions, and informal phrasing.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Use the reflexive form of the verb in every sentence (e.g. Romanian: 'a se uita', 'a se gândi'; Russian/Ukrainian: verbs ending in -ся/-сь; Polish: verbs with 'się')." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Reflexive form</span><br><span style="font-size:.76rem;color:var(--muted)">Sentences use the reflexive construction — the verb acts on the subject itself (ro: <em>a se uita</em>, ru: <em>учиться</em>, uk: <em>вчитися</em>, pl: <em>uczyć się</em>).</span></span>
+                                    <input type="checkbox"
+                                        value="Use the reflexive form of the verb in every sentence (e.g. Romanian: 'a se uita', 'a se gândi'; Russian/Ukrainian: verbs ending in -ся/-сь; Polish: verbs with 'się')."
+                                        style="margin-top:3px;flex-shrink:0" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Reflexive
+                                            form</span><br><span style="font-size:.76rem;color:var(--muted)">Sentences
+                                            use the reflexive construction — the verb acts on the subject itself (ro:
+                                            <em>a se uita</em>, ru: <em>учиться</em>, uk: <em>вчитися</em>, pl:
+                                            <em>uczyć się</em>).</span></span>
                                 </label>
                             </div>
-                            <input type="text" id="ai-custom-instruction" placeholder="Custom instruction… e.g. use diminutives"
-                                style="width:100%" />
+                            <input type="text" id="ai-custom-instruction"
+                                placeholder="Custom instruction… e.g. use diminutives" style="width:100%" />
                         </div>
                     </div>
                 </div>
@@ -1081,8 +1120,7 @@
         // Hide/show the count input when an auto-count option is toggled
         function _toggleAutoCount(cb) {
             const anyAuto = [...document.querySelectorAll('[onchange*="_toggleAutoCount"]')].some(c => c.checked);
-            const wrap = document.getElementById('ai-count').parentElement;
-            wrap.style.display = anyAuto ? 'none' : '';
+            document.getElementById('ai-count').style.display = anyAuto ? 'none' : '';
         }
 
         // Show manual panel by default
