@@ -41,7 +41,7 @@ python app.py
 **Source modes:**
 - **Upload file** — drag & drop or browse a `.csv` / `.json` file
 - **Enter sentences** — type pairs directly into the form; no file needed. Specify language codes, add as many pairs as you need, translation column is optional.
-- **AI phrase generator** — type a single word or collocation and let an LLM write a natural sentence and its translation for you. Requires an LLM provider to be configured (see [llm.md](llm.md)).
+- **AI phrase generator** — type a single word or collocation and let an LLM write a natural sentence and its translation for you. Supports **prompt options** (verb tenses, negative forms, reflexive, grammatical forms, register) and a free-text custom instruction field. Requires an LLM provider to be configured (see [llm.md](llm.md)).
 
 The web interface supports all the same options as the CLI (speeds, pauses, voice overrides, skip-translation, split mode, row range) plus server-side [limits](limits.md) and [authentication](authorization.md).
 In **split mode** the download is a ZIP archive instead of a single MP3.
@@ -75,9 +75,12 @@ Cum te simți astăzi?,How are you feeling today?
 
 | Code | Language | Default voice |
 |---|---|---|
-| `ro` | Romanian | `ro-RO-EmilNeural` |
+| `ro` | Română | `ro-RO-EmilNeural` |
 | `en` | English | `en-US-AriaNeural` |
-| `uk` | Ukrainian | `uk-UA-PolinaNeural` |
+| `uk` | Українська | `uk-UA-PolinaNeural` |
+| `ru` | Русский | `ru-RU-SvetlanaNeural` |
+| `pl` | Polski | `pl-PL-ZofiaNeural` |
+| `pt` | Português | `pt-BR-FranciscaNeural` |
 
 Default voices are defined in `tts_engines.py → LANG_VOICES`. Add any language there, or pass a custom voice at runtime:
 

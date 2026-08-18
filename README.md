@@ -119,6 +119,9 @@ Default voices, used unless overridden with `--voice`:
 | `ro` | Romanian | `ro-RO-EmilNeural` |
 | `en` | English | `en-US-AriaNeural` |
 | `uk` | Ukrainian | `uk-UA-PolinaNeural` |
+| `ru` | Russian | `ru-RU-SvetlanaNeural` |
+| `pl` | Polish | `pl-PL-ZofiaNeural` |
+| `pt` | Portuguese | `pt-BR-FranciscaNeural` |
 
 These live in [`tts_engines.py`](tts_engines.py)'s `LANG_VOICES` dict — add a
 language there, or just pass `--voice <code>=<voice-id>` for anything not

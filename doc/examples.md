@@ -199,12 +199,26 @@ Leave **Translation language code** blank to skip translation audio automaticall
 
 Requires an LLM provider configured in `.env` (see [llm.md](llm.md)).
 
-1. In the *Enter sentences* tab, set **Learning language code** to `en` and **Translation language code** to `uk`.
-2. In the **✨ AI phrase generator** box, type a word or collocation, e.g. `morning routine`.
-3. Click **Generate** — the LLM produces a natural sentence and fills in a new row:
-   - Learning: *I always start my morning routine with a cup of coffee.*
-   - Translation: *Я завжди починаю ранковий ритуал з чашки кави.*
+1. In the *Enter sentences* tab, select **Română** as the learning language and **Українська** as the translation language.
+2. In the **✨ AI phrase generator** box, type a word or collocation, e.g. `a uita`.
+3. Set the count to `3` and click **Generate** — the LLM fills three rows.
 4. Repeat for other words, adjust any pairs manually, then click **Continue →**.
+
+#### Prompt options (expand ▶ Prompt options)
+
+| Option | What it does | Locks count? |
+|---|---|---|
+| One sentence per tense | Generates present/past/future/conditional/imperative — one each | Yes → auto |
+| Only negative sentences | All sentences use negation | No |
+| Mix negative/affirmative | Mixed positive and negative | No |
+| Include questions | Some sentences are questions | No |
+| Show grammatical forms | One sentence per gender/case/number combination | Yes → auto |
+| Formal register | Polite, official language | No |
+| Informal/colloquial | Everyday speech, contractions | No |
+| Reflexive form | Forces reflexive verb construction (ro: *a se uita*, ru: *учиться*) | No |
+| Custom instruction | Free-text field — any additional requirement | No |
+
+When **One sentence per tense** or **Show grammatical forms** is checked, the count input is hidden and the LLM decides how many sentences to generate.
 
 ---
 
