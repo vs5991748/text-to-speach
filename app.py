@@ -177,10 +177,11 @@ _suggest_jobs_lock = threading.Lock()
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
-def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, count: int = 1) -> list:
+def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, count: int = 1, instructions: str = "") -> list:
     """Call an OpenAI-compatible LLM with retry/backoff. Returns list of {learning, translation}."""
     url = f"{cfg['base_url']}/v1/chat/completions"
     print(f"[LLM] POST {url} model={cfg['model']} word={word!r} count={count}", file=sys.stderr, flush=True)
+    extra = f" Additional requirements: {instructions.strip()}" if instructions.strip() else ""
     if count == 1:
         trans_part = (
             f' Then translate the sentence into the language with code "{translation_lang}".'
@@ -191,7 +192,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
             f'You are a language learning assistant. '
             f'Write one short, natural, everyday sentence in the language with code "{learning_lang}" '
             f'that uses or illustrates the word or phrase "{word}".'
-            f'{trans_part} '
+            f'{trans_part}{extra} '
             f'Respond with ONLY valid JSON, no extra text: '
             f'{{"learning": "<sentence>"{trans_field}}}'
         )
@@ -204,7 +205,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
         prompt = (
             f'You are a language learning assistant. '
             f'Write {count} different short, natural sentences in the language with code "{learning_lang}" '
-            f'that each use or illustrate the word or phrase "{word}"{trans_part}. '
+            f'that each use or illustrate the word or phrase "{word}"{trans_part}.{extra} '
             f'Respond with ONLY a valid JSON array, no extra text: '
             f'[{{"learning": "<sentence 1>"{trans_field}}}, ...]'
         )
@@ -632,6 +633,7 @@ def suggest():
     learning_lang = str(data.get("learning_lang", "")).strip()
     translation_lang = str(data.get("translation_lang", "")).strip()
     count = max(1, min(5, int(data.get("count", 1) or 1)))
+    instructions = str(data.get("instructions", "")).strip()[:500]  # cap to prevent prompt injection
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
 
@@ -644,17 +646,17 @@ def suggest():
 
     threading.Thread(
         target=_run_suggest,
-        args=(suggest_id, cfg, word, learning_lang, translation_lang, count, user_key_for_cooldown),
+        args=(suggest_id, cfg, word, learning_lang, translation_lang, count, instructions, user_key_for_cooldown),
         daemon=True,
     ).start()
     return jsonify({"suggest_id": suggest_id})
 
 
-def _run_suggest(suggest_id, cfg, word, learning_lang, translation_lang, count, user_key_for_cooldown):
+def _run_suggest(suggest_id, cfg, word, learning_lang, translation_lang, count, instructions, user_key_for_cooldown):
     with _suggest_jobs_lock:
         _suggest_jobs[suggest_id]["status"] = "running"
     try:
-        pairs = _call_llm(cfg, word, learning_lang, translation_lang, count)
+        pairs = _call_llm(cfg, word, learning_lang, translation_lang, count, instructions)
         if user_key_for_cooldown:
             with _last_suggest_time_lock:
                 _last_suggest_time[user_key_for_cooldown] = time.monotonic()

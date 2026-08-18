@@ -798,6 +798,26 @@
                     </div>
                     <span id="ai-error" class="hint"
                         style="color:var(--red);display:none;margin-top:6px;display:block"></span>
+
+                    <!-- Prompt options (collapsible) -->
+                    <div style="margin-top:10px">
+                        <button type="button" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'; this.textContent=this.textContent.startsWith('▶')?'▼ Prompt options':'▶ Prompt options'"
+                            style="background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;padding:0">▶ Prompt options</button>
+                        <div style="display:none;margin-top:8px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+                            <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Checked options are added to the prompt as extra instructions.</div>
+                            <div id="ai-prompt-options" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Use a variety of verb tenses (present, past, future, conditional)." /> Use all verb tenses</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Make all sentences negative." /> Only negative sentences</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Mix affirmative and negative sentences." /> Mix negative/affirmative</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Include some questions among the sentences." /> Include questions</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Demonstrate grammatical gender agreement and declension where applicable." /> Show gender/declension</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Use formal/polite register." /> Formal register</label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--text);font-weight:400;cursor:pointer"><input type="checkbox" value="Use informal/colloquial language." /> Informal/colloquial</label>
+                            </div>
+                            <input type="text" id="ai-custom-instruction" placeholder="Custom instruction… e.g. use diminutives"
+                                style="width:100%" />
+                        </div>
+                    </div>
                 </div>
                 {% else %}
                 <div
@@ -1102,6 +1122,11 @@
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
             const translationLang = document.getElementById('manual-translation-lang').value.trim();
             const count = Math.max(1, Math.min(5, parseInt(document.getElementById('ai-count').value) || 1));
+            // Collect checked prompt options + custom instruction
+            const checkedOpts = [...document.querySelectorAll('#ai-prompt-options input[type=checkbox]:checked')].map(c => c.value);
+            const custom = (document.getElementById('ai-custom-instruction')?.value || '').trim();
+            if (custom) checkedOpts.push(custom);
+            const instructions = checkedOpts.join(' ');
             const errEl = document.getElementById('ai-error');
             errEl.style.display = 'none';
             if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
@@ -1113,7 +1138,7 @@
                 const startRes = await fetch('/suggest', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang, count }),
+                    body: JSON.stringify({ word, learning_lang: learningLang, translation_lang: translationLang, count, instructions }),
                 });
                 const startData = await startRes.json();
                 if (!startRes.ok) {
