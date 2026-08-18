@@ -808,8 +808,8 @@
                             <div id="ai-prompt-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" id="ai-opt-tenses" value="Generate one sentence per major verb tense (present, past simple, past perfect, future, conditional, imperative — one tense each)." style="margin-top:3px;flex-shrink:0"
-                                        onchange="const c=document.getElementById('ai-count'); if(this.checked){c._prev=c.value;c.value=5;c.disabled=true;}else{c.value=c._prev||1;c.disabled=false;}" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">One sentence per tense</span><br><span style="font-size:.76rem;color:var(--muted)">Generates one sentence per major tense (present, past, future, conditional, imperative). Automatically sets count to 5.</span></span>
+                                        onchange="_toggleAutoCount(this)" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">One sentence per tense</span><br><span style="font-size:.76rem;color:var(--muted)">Generates one sentence per major tense (present, past, future, conditional, imperative). The LLM decides the quantity — count input is hidden.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Make all sentences negative." style="margin-top:3px;flex-shrink:0" />
@@ -825,8 +825,8 @@
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Each sentence must clearly demonstrate a different grammatical form: vary gender (masculine, feminine, neuter), case (nominative, accusative, dative, genitive), and number (singular, plural) across sentences." style="margin-top:3px;flex-shrink:0"
-                                        onchange="const c=document.getElementById('ai-count'); if(this.checked){c._prev2=c.value;c.value=5;c.disabled=true;}else{c.value=c._prev2||1;c.disabled=false;}" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Show grammatical forms</span><br><span style="font-size:.76rem;color:var(--muted)">Each sentence demonstrates a different grammatical form — gender, case, or number (most useful for Romanian, Russian, Ukrainian, Polish). Automatically sets count to 5.</span></span>
+                                        onchange="_toggleAutoCount(this)" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Show grammatical forms</span><br><span style="font-size:.76rem;color:var(--muted)">Each sentence demonstrates a different grammatical form — gender, case, or number. The LLM decides the quantity — count input is hidden.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Use formal/polite register." style="margin-top:3px;flex-shrink:0" />
@@ -1074,6 +1074,13 @@
             }
         }
 
+        // Hide/show the count input when an auto-count option is toggled
+        function _toggleAutoCount(cb) {
+            const anyAuto = [...document.querySelectorAll('[onchange*="_toggleAutoCount"]')].some(c => c.checked);
+            const wrap = document.getElementById('ai-count').parentElement;
+            wrap.style.display = anyAuto ? 'none' : '';
+        }
+
         // Show manual panel by default
         switchTab('manual');
 
@@ -1144,7 +1151,8 @@
             const word = document.getElementById('ai-word').value.trim();
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
             const translationLang = document.getElementById('manual-translation-lang').value.trim();
-            const count = Math.max(1, Math.min(5, parseInt(document.getElementById('ai-count').value) || 1));
+            const anyAuto = [...document.querySelectorAll('[onchange*="_toggleAutoCount"]')].some(c => c.checked);
+            const count = anyAuto ? 0 : Math.max(1, Math.min(5, parseInt(document.getElementById('ai-count').value) || 1));
             // Collect checked prompt options + custom instruction
             const checkedOpts = [...document.querySelectorAll('#ai-prompt-options input[type=checkbox]:checked')].map(c => c.value);
             const custom = (document.getElementById('ai-custom-instruction')?.value || '').trim();

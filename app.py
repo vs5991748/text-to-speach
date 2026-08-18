@@ -182,7 +182,22 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
     url = f"{cfg['base_url']}/v1/chat/completions"
     print(f"[LLM] POST {url} model={cfg['model']} word={word!r} count={count}", file=sys.stderr, flush=True)
     extra = f" Additional requirements: {instructions.strip()}" if instructions.strip() else ""
-    if count == 1:
+    if count == 0:
+        # Unconstrained — LLM decides quantity based on the instructions
+        trans_part = (
+            f', each with a translation into the language with code "{translation_lang}"'
+            if translation_lang else ""
+        )
+        trans_field = ', "translation": "<translation>"' if translation_lang else ""
+        prompt = (
+            f'You are a language learning assistant. '
+            f'Using the word or phrase "{word}" in the language with code "{learning_lang}"{trans_part}, '
+            f'generate as many sentences as needed.{extra} '
+            f'Respond with ONLY a valid JSON array, no extra text: '
+            f'[{{"learning": "<sentence>"{trans_field}}}, ...]'
+        )
+        base_max_tokens = max(LLM_MAX_TOKENS * 3, 3000)
+    elif count == 1:
         trans_part = (
             f' Then translate the sentence into the language with code "{translation_lang}".'
             if translation_lang else ""
@@ -209,7 +224,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
             f'Respond with ONLY a valid JSON array, no extra text: '
             f'[{{"learning": "<sentence 1>"{trans_field}}}, ...]'
         )
-    base_max_tokens = max(LLM_MAX_TOKENS, count * 200)
+    base_max_tokens = max(LLM_MAX_TOKENS, count * 200) if count > 0 else max(LLM_MAX_TOKENS * 3, 3000)
     headers = {"Content-Type": "application/json"}
     if cfg["api_key"]:
         headers["Authorization"] = f"Bearer {cfg['api_key']}"
@@ -632,7 +647,7 @@ def suggest():
     word = str(data.get("word", "")).strip()
     learning_lang = str(data.get("learning_lang", "")).strip()
     translation_lang = str(data.get("translation_lang", "")).strip()
-    count = max(1, min(5, int(data.get("count", 1) or 1)))
+    count = max(0, min(5, int(data.get("count", 1) or 1)))  # 0 = unconstrained (LLM decides)
     instructions = str(data.get("instructions", "")).strip()[:500]  # cap to prevent prompt injection
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
