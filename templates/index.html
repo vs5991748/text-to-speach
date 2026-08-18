@@ -807,8 +807,9 @@
                             <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Checked options are added to the prompt as extra instructions.</div>
                             <div id="ai-prompt-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox" value="Use a variety of verb tenses (present, past, future, conditional)." style="margin-top:3px;flex-shrink:0" />
-                                    <span><span style="font-size:.84rem;color:var(--text)">Use all verb tenses</span><br><span style="font-size:.76rem;color:var(--muted)">Each sentence uses a different tense — past, present, future, conditional.</span></span>
+                                    <input type="checkbox" id="ai-opt-tenses" value="Generate one sentence per major verb tense (present, past simple, past perfect, future, conditional, imperative — one tense each)." style="margin-top:3px;flex-shrink:0"
+                                        onchange="const c=document.getElementById('ai-count'); if(this.checked){c._prev=c.value;c.value=5;c.disabled=true;}else{c.value=c._prev||1;c.disabled=false;}" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">One sentence per tense</span><br><span style="font-size:.76rem;color:var(--muted)">Generates one sentence per major tense (present, past, future, conditional, imperative). Automatically sets count to 5.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Make all sentences negative." style="margin-top:3px;flex-shrink:0" />
