@@ -847,13 +847,13 @@
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox"
-                                        value="Each sentence must clearly demonstrate a different grammatical form of the word or phrase itself. If it is a noun, pronoun, or adjective, vary gender (masculine, feminine, neuter), case (nominative, accusative, dative, genitive), and number (singular, plural). If it is a verb, vary person (I, you, he/she, we, they), mood (indicative, imperative, conditional, subjunctive), and tense — one distinct form per sentence."
+                                        value="Each sentence must clearly demonstrate a different grammatical form of the word or phrase itself. If it is a noun, pronoun, or adjective, produce one sentence for EACH combination of gender (masculine, feminine, neuter — skip genders the language lacks) and number (singular, plural), correctly declined. If it is a verb, produce one sentence for EACH of the six grammatical persons (I, you-singular, he/she/it, we, you-plural, they), correctly conjugated for that person — six sentences minimum, one per person, do not stop early or skip any."
                                         style="margin-top:3px;flex-shrink:0" onchange="_toggleAutoCount(this)" />
                                     <span><span style="font-size:.84rem;color:var(--text)">Show grammatical
-                                            forms</span><br><span style="font-size:.76rem;color:var(--muted)">Each
-                                            sentence demonstrates a different grammatical form of the word itself —
-                                            gender/case/number for nouns, or person/mood/tense for verbs. The LLM
-                                            decides the quantity — count input is hidden.</span></span>
+                                            forms</span><br><span style="font-size:.76rem;color:var(--muted)">One
+                                            sentence per gender/number combination for nouns, or one per grammatical
+                                            person (I, you, he/she, we, you-pl, they) for verbs. The LLM decides the
+                                            exact quantity — count input is hidden.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Use formal/polite register."
