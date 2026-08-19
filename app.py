@@ -194,8 +194,11 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
             f'Your task: {extra} '
             f'Use the word or phrase "{word}" in every sentence, written in the language with code "{learning_lang}"{trans_part}. '
             f'You MUST produce MULTIPLE sentences — one per required variation. '
-            f'Respond with ONLY a valid JSON array containing ALL generated sentences, no extra text: '
-            f'[{{"learning": "<sentence 1>"{trans_field}}}, {{"learning": "<sentence 2>"{trans_field}}}, ...]'
+            f'Each variation MUST be its own separate array element. '
+            f'Never combine more than one sentence into a single "learning" or "translation" string '
+            f'(e.g. do not join sentences with newlines, semicolons, or numbering) — one sentence per element only. '
+            f'Respond with ONLY a valid JSON array containing ALL generated sentences as separate elements, no extra text: '
+            f'[{{"learning": "<sentence 1>"{trans_field}}}, {{"learning": "<sentence 2>"{trans_field}}}, {{"learning": "<sentence 3>"{trans_field}}}, ...]'
         )
         base_max_tokens = max(LLM_MAX_TOKENS * 3, 3000)
     elif count == 1:
@@ -285,6 +288,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
                     print(f"[LLM] null content finish_reason={finish}", file=sys.stderr, flush=True)
                     hint = " (token limit hit during reasoning — raise LLM_MAX_TOKENS)" if finish == "length" else ""
                     raise ValueError(f"LLM returned no usable content{hint}.")
+                print(f"[LLM] attempt {attempt+1} raw content: {raw_content!r}", file=sys.stderr, flush=True)
                 content = raw_content.strip()
                 if "```" in content:
                     content = re.sub(r"```(?:json)?", "", content).strip()
@@ -307,9 +311,10 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
                 _placeholders = {"", "...", "<sentence>", "<sentence 1>", "<sentence 2>"}
                 if all(str(p.get("learning", "")).strip() in _placeholders for p in parsed):
                     raise ValueError("LLM returned placeholder text. Retrying.")
+                print(f"[LLM] attempt {attempt+1} success: {len(parsed)} pair(s)", file=sys.stderr, flush=True)
                 return parsed
             except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
-                print(f"[LLM] attempt {attempt+1} parse error: {type(e).__name__}: {e} | raw: {str(data)[:300]}", file=sys.stderr, flush=True)
+                print(f"[LLM] attempt {attempt+1} parse error: {type(e).__name__}: {e} | full response: {data!r}", file=sys.stderr, flush=True)
                 last_exc = e
                 # Double token budget on length cutoff so next attempt has more room
                 if data.get("choices") and data["choices"][0].get("finish_reason") == "length":
