@@ -177,6 +177,30 @@ _suggest_jobs_lock = threading.Lock()
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
+def _split_multiline_pairs(parsed: list) -> list:
+    """Split any pair whose 'learning'/'translation' field wrongly bundles multiple
+    newline-joined sentences into separate pairs, one sentence per pair."""
+    result = []
+    for item in parsed:
+        learning_lines = [l.strip() for l in str(item.get("learning", "")).split("\n") if l.strip()]
+        if len(learning_lines) <= 1:
+            result.append(item)
+            continue
+        translation = item.get("translation")
+        if translation is not None:
+            translation_lines = [l.strip() for l in str(translation).split("\n") if l.strip()]
+            if len(translation_lines) == len(learning_lines):
+                result.extend(
+                    {"learning": l, "translation": t} for l, t in zip(learning_lines, translation_lines)
+                )
+                continue
+            # Mismatched line counts — can't safely pair them up, leave item untouched.
+            result.append(item)
+            continue
+        result.extend({"learning": l} for l in learning_lines)
+    return result
+
+
 def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, count: int = 1, instructions: str = "") -> list:
     """Call an OpenAI-compatible LLM with retry/backoff. Returns list of {learning, translation}."""
     url = f"{cfg['base_url']}/v1/chat/completions"
@@ -307,6 +331,7 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
                         parsed = [parsed]
                 if not parsed or "learning" not in parsed[0]:
                     raise ValueError("LLM response missing 'learning' field.")
+                parsed = _split_multiline_pairs(parsed)
                 # Reject template/placeholder responses — retry so the model gives real content
                 _placeholders = {"", "...", "<sentence>", "<sentence 1>", "<sentence 2>"}
                 if all(str(p.get("learning", "")).strip() in _placeholders for p in parsed):
