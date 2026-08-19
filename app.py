@@ -176,6 +176,14 @@ _suggest_jobs_lock = threading.Lock()
 
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
+# Substrings (lowercase) unique to the "auto-count" prompt-option instructions in
+# templates/index.html — these options make the LLM decide quantity, so count must
+# be forced to 0 server-side even if the client sends something else.
+_AUTO_COUNT_MARKERS = (
+    "one sentence per major verb tense",
+    "grammatical form of the word or phrase itself",
+)
+
 
 def _split_multiline_pairs(parsed: list) -> list:
     """Split any pair whose 'learning'/'translation' field wrongly bundles multiple
@@ -678,8 +686,14 @@ def suggest():
     word = str(data.get("word", "")).strip()
     learning_lang = str(data.get("learning_lang", "")).strip()
     translation_lang = str(data.get("translation_lang", "")).strip()
-    count = max(0, min(5, int(data.get("count", 1) or 1)))  # 0 = unconstrained (LLM decides)
+    try:
+        count = int(data.get("count", 1))
+    except (TypeError, ValueError):
+        count = 1
+    count = max(0, min(5, count))  # 0 = unconstrained (LLM decides)
     instructions = str(data.get("instructions", "")).strip()[:500]  # cap to prevent prompt injection
+    if count and any(marker in instructions.lower() for marker in _AUTO_COUNT_MARKERS):
+        count = 0  # these options are unconstrained regardless of what the client sent
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
 
