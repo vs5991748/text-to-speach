@@ -847,12 +847,13 @@
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox"
-                                        value="Each sentence must clearly demonstrate a different grammatical form: vary gender (masculine, feminine, neuter), case (nominative, accusative, dative, genitive), and number (singular, plural) across sentences."
+                                        value="Each sentence must clearly demonstrate a different grammatical form of the word or phrase itself. If it is a noun, pronoun, or adjective, vary gender (masculine, feminine, neuter), case (nominative, accusative, dative, genitive), and number (singular, plural). If it is a verb, vary person (I, you, he/she, we, they), mood (indicative, imperative, conditional, subjunctive), and tense — one distinct form per sentence."
                                         style="margin-top:3px;flex-shrink:0" onchange="_toggleAutoCount(this)" />
                                     <span><span style="font-size:.84rem;color:var(--text)">Show grammatical
                                             forms</span><br><span style="font-size:.76rem;color:var(--muted)">Each
-                                            sentence demonstrates a different grammatical form — gender, case, or
-                                            number. The LLM decides the quantity — count input is hidden.</span></span>
+                                            sentence demonstrates a different grammatical form of the word itself —
+                                            gender/case/number for nouns, or person/mood/tense for verbs. The LLM
+                                            decides the quantity — count input is hidden.</span></span>
                                 </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Use formal/polite register."
