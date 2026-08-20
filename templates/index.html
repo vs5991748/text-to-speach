@@ -1082,6 +1082,7 @@
         let detectedLangs = [];
         let pollingTimer = null;
         let activeTab = 'manual';
+        let lastAiWord = ''; // most recent AI-generator word/collocation, used to name the downloaded audio file
 
         // ── Page tab navigation ────────────────────────────────
         function switchPageTab(name) {
@@ -1250,6 +1251,7 @@
                         last.querySelector('.manual-learning').value = pair.learning || '';
                         if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
                     });
+                    lastAiWord = word;
                     document.getElementById('ai-word').select();
                     const uiCooldown = SUGGEST_COOLDOWN_SECONDS || 60;
                     if (!IS_SU) localStorage.setItem('tts_last_suggest', Date.now());
@@ -1290,6 +1292,7 @@
             const file = new File([blob], 'manual-input.json', { type: 'application/json' });
             const formData = new FormData();
             formData.append('file', file);
+            if (lastAiWord) formData.append('word', lastAiWord);
             const meta = `${pairs.length} pair${pairs.length > 1 ? 's' : ''} · ${learningLang}${translationLang ? ' / ' + translationLang : ' (no translation)'}`;
             await _doUpload(formData, `${pairs.length} sentence pair${pairs.length > 1 ? 's' : ''} (manual)`, meta, learningLang, !translationLang);
         }

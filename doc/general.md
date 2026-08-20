@@ -45,6 +45,7 @@ python app.py
 
 The web interface supports all the same options as the CLI (speeds, pauses, voice overrides, skip-translation, split mode, row range) plus server-side [limits](limits.md) and [authentication](authorization.md).
 In **split mode** the download is a ZIP archive instead of a single MP3.
+When split mode is off and the sentences came from the **AI phrase generator**, the downloaded MP3 is named after the word/collocation you typed (e.g. `commute.mp3`) instead of the generic `audio.mp3`.
 
 ---
 

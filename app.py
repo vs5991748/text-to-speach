@@ -515,9 +515,13 @@ def upload():
                         "error": f"Row {i} [{lang}] is {len(text)} chars; maximum allowed is {MAX_STRING_LENGTH}."
                     }), 422
 
+    # Optional: the AI generator's word/collocation, if that's how these pairs were produced —
+    # used to name the downloaded file instead of the generic "audio.mp3" (single-file mode only).
+    word = request.form.get("word", "").strip()[:100]
+
     file_id = str(uuid.uuid4())
     with _uploads_lock:
-        _uploads[file_id] = {"path": tmp.name, "count": len(pairs)}
+        _uploads[file_id] = {"path": tmp.name, "count": len(pairs), "word": word}
 
     return jsonify({"file_id": file_id, "langs": langs, "count": len(pairs),
                     "first_pairs": pairs[:10],
@@ -558,6 +562,7 @@ def generate():
 
     input_path = upload_entry["path"]
     row_count = upload_entry["count"]
+    word = upload_entry.get("word", "")
 
     if not g.is_su and _exceeds_row_throughput(g.username, row_count):
         os.unlink(input_path)
@@ -599,13 +604,13 @@ def generate():
 
     job_id = str(uuid.uuid4())
     with _jobs_lock:
-        _jobs[job_id] = {"status": "pending", "result_path": None, "error": None, "format": None}
+        _jobs[job_id] = {"status": "pending", "result_path": None, "error": None, "format": None, "download_name": None}
 
     thread = threading.Thread(
         target=_run_generation,
         args=(job_id, input_path, learning_lang, target_speeds,
               pause_after_target, pause_after_translation, no_translation, voice_override_pairs,
-              split, output_dir, rows_spec),
+              split, output_dir, rows_spec, word),
         daemon=True,
     )
     thread.start()
@@ -620,7 +625,7 @@ def generate():
 
 def _run_generation(job_id, input_path, learning_lang, target_speeds,
                     pause_after_target_s, pause_after_translation_s, no_translation, voice_override_pairs,
-                    split, output_dir, rows_spec):
+                    split, output_dir, rows_spec, word=""):
     with _jobs_lock:
         _jobs[job_id]["status"] = "running"
 
@@ -690,11 +695,16 @@ def _run_generation(job_id, input_path, learning_lang, target_speeds,
                 result_path = output_tmp.name
                 result_format = "mp3"
 
+        # Single-file downloads are named after the AI generator's word/collocation when the
+        # pairs came from there; split (one-file-per-record) downloads keep the fixed ZIP name.
+        download_name = f"{_slugify(word)}.mp3" if (result_format == "mp3" and word) else None
+
         with _jobs_lock:
             if _jobs[job_id]["status"] != "error":  # not already timed out
                 _jobs[job_id]["status"] = "done"
                 _jobs[job_id]["result_path"] = result_path
                 _jobs[job_id]["format"] = result_format
+                _jobs[job_id]["download_name"] = download_name
 
     except (SystemExit, ValueError, Exception) as e:
         if output_tmp:
@@ -860,7 +870,7 @@ def download(job_id):
     return send_file(
         job["result_path"],
         as_attachment=True,
-        download_name="audio.mp3",
+        download_name=job.get("download_name") or "audio.mp3",
         mimetype="audio/mpeg",
     )
 
