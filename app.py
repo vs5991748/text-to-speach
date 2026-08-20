@@ -245,6 +245,10 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
     url = f"{cfg['base_url']}/v1/chat/completions"
     print(f"[LLM] POST {url} model={cfg['model']} word={word!r} count={count}", file=sys.stderr, flush=True)
     extra = f" Additional requirements: {instructions.strip()}" if instructions.strip() else ""
+    sentence_style = (
+        "a natural, medium-length sentence that describes a small situation in context — who is "
+        "involved, and when, where, or why it happens — rather than a short, bare statement"
+    )
     if count == 0:
         # Unconstrained — quantity driven entirely by the extra instruction
         trans_part = (
@@ -256,6 +260,11 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
             f'You are a language learning assistant. '
             f'Your task: {extra} '
             f'Use the word or phrase "{word}" in every sentence, written in the language with code "{learning_lang}"{trans_part}. '
+            f'Each sentence should be {sentence_style}, and must be grammatically correct — never an '
+            f'artificial or contradictory construction. '
+            f'Each sentence must demonstrate EXACTLY ONE of the required variations — never combine two or '
+            f'more variations (e.g. two different grammatical persons, or an indicative and an imperative) '
+            f'into a single sentence. '
             f'You MUST produce MULTIPLE sentences — one per required variation. '
             f'Each variation MUST be its own separate array element. '
             f'Never combine more than one sentence into a single "learning" or "translation" string '
@@ -272,8 +281,9 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
         trans_field = ', "translation": "<translation>"' if translation_lang else ""
         prompt = (
             f'You are a language learning assistant. '
-            f'Write one short, natural, everyday sentence in the language with code "{learning_lang}" '
-            f'that uses or illustrates the word or phrase "{word}".'
+            f'Write one sentence in the language with code "{learning_lang}" '
+            f'that uses or illustrates the word or phrase "{word}". '
+            f'The sentence should be {sentence_style}.'
             f'{trans_part}{extra} '
             f'Respond with ONLY valid JSON, no extra text: '
             f'{{"learning": "<sentence>"{trans_field}}}'
@@ -286,8 +296,9 @@ def _call_llm(cfg: dict, word: str, learning_lang: str, translation_lang: str, c
         trans_field = ', "translation": "<translation>"' if translation_lang else ""
         prompt = (
             f'You are a language learning assistant. '
-            f'Write {count} different short, natural sentences in the language with code "{learning_lang}" '
-            f'that each use or illustrate the word or phrase "{word}"{trans_part}.{extra} '
+            f'Write {count} different sentences in the language with code "{learning_lang}" '
+            f'that each use or illustrate the word or phrase "{word}"{trans_part}. '
+            f'Each sentence should be {sentence_style}.{extra} '
             f'Respond with ONLY a valid JSON array, no extra text: '
             f'[{{"learning": "<sentence 1>"{trans_field}}}, ...]'
         )
