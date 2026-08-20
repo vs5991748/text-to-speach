@@ -154,6 +154,16 @@ def build_split_tracks(pairs, learning_lang, translation_lang, learning_voice, t
     return paths
 
 
+def write_split_transcript(pairs, learning_lang, translation_lang, output_dir):
+    """Write a text file pairing each split MP3's filename with its sentence and translation."""
+    path = os.path.join(output_dir, "sentences.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        for i, pair in enumerate(pairs, 1):
+            fname = f"{i:03d}_{_slugify(pair[learning_lang])}.mp3"
+            f.write(f"{fname}\n{pair[learning_lang]}\n{pair.get(translation_lang, '')}\n\n")
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -223,8 +233,9 @@ def main():
                     workdir,
                     output_dir,
                 )
+                write_split_transcript(pairs, args.learning_lang, translation_lang, output_dir)
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for fname in sorted(f for f in os.listdir(output_dir) if f.endswith(".mp3")):
+                    for fname in sorted(f for f in os.listdir(output_dir) if f.endswith((".mp3", ".txt"))):
                         zf.write(os.path.join(output_dir, fname), fname)
             finally:
                 import shutil

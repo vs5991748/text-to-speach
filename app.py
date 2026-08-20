@@ -111,7 +111,7 @@ if not _users:
     import warnings
     warnings.warn("No users configured (USERS / SU_USERS) — authentication is disabled.", stacklevel=1)
 
-from generate_audio import build_split_tracks, build_track, load_pairs, parse_voice_overrides, resolve_voice, _slugify, _slice_pairs
+from generate_audio import build_split_tracks, build_track, load_pairs, parse_voice_overrides, resolve_voice, _slugify, _slice_pairs, write_split_transcript
 from tts_engines import LANG_VOICES, LANG_NAMES
 
 app = Flask(__name__)
@@ -668,9 +668,10 @@ def _run_generation(job_id, input_path, learning_lang, target_speeds,
                     workdir,
                     output_dir,
                 )
+                write_split_transcript(pairs, learning_lang, translation_lang, output_dir)
                 zip_path = os.path.join(output_dir, "audio_pack.zip")
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for fname in sorted(f for f in os.listdir(output_dir) if f.endswith(".mp3")):
+                    for fname in sorted(f for f in os.listdir(output_dir) if f.endswith((".mp3", ".txt"))):
                         zf.write(os.path.join(output_dir, fname), fname)
                 result_path = zip_path
                 result_format = "zip"
