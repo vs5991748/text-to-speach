@@ -163,6 +163,33 @@ LLM error: LLM returned no usable content (token limit hit during reasoning — 
 
 ---
 
+## "Show grammatical forms" — per-language prompt fragments
+
+The **✨ AI phrase generator**'s "Show grammatical forms" checkbox asks the
+LLM to produce one sentence per grammatical form of the word (noun/pronoun/
+adjective declension, or verb conjugation). A single English instruction
+can't describe every supported language accurately — English has no
+grammatical gender, while Ukrainian/Russian/Polish are case languages with
+6–7 cases, for example — so the app looks up a per-language clarifying
+fragment in `prompts/grammatical_forms/<lang>.txt`, keyed by the learning
+language code (`ro`, `en`, `uk`, `ru`, `pl`, `pt`), and substitutes it into
+the request in place of the generic instruction.
+
+**Scope:** this only applies to the "Show grammatical forms" option. Other
+prompt options (tenses, negative/mixed, questions, register, reflexive
+form, custom instruction) are unaffected.
+
+**Adding a language:** create `prompts/grammatical_forms/<lang>.txt` with
+plain-text instructions covering both branches the LLM needs to choose
+between — noun/pronoun/adjective forms (gender/case/number as applicable)
+and verb forms (person/mood as applicable) — see the existing files for the
+expected level of detail. A learning language with no fragment file falls
+back to the generic (English-authored) instruction baked into
+`templates/index.html`, so nothing breaks — it just won't be as accurate
+for that language until a fragment is added.
+
+---
+
 ## Full reference
 
 | Variable | Default | Description |

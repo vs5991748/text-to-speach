@@ -184,6 +184,37 @@ _AUTO_COUNT_MARKERS = (
     "grammatical form of the word or phrase itself",
 )
 
+# The exact "Show grammatical forms" checkbox value from templates/index.html — the
+# language-agnostic instruction it sends by default. When a per-language fragment exists
+# (see doc/spikes/architecture-per-language-grammatical-forms-spike.md), this text is
+# swapped out for that fragment; otherwise it's left as-is and serves as the fallback.
+_GRAMMATICAL_FORMS_MARKER = "grammatical form of the word or phrase itself"
+_GRAMMATICAL_FORMS_GENERIC_TEXT = (
+    "Each sentence must clearly demonstrate a different grammatical form of the word or phrase "
+    "itself. If it is a noun, pronoun, or adjective, produce one sentence for EACH combination of "
+    "gender (masculine, feminine, neuter — skip genders the language lacks) and number (singular, "
+    "plural), correctly declined. If it is a verb, produce one sentence for EACH of the six "
+    "grammatical persons (I, you-singular, he/she/it, we, you-plural, they), correctly conjugated "
+    "for that person — six sentences minimum, one per person, do not stop early or skip any."
+)
+_GRAMMATICAL_FORMS_DIR = Path(__file__).parent / "prompts" / "grammatical_forms"
+
+
+def _load_grammatical_forms_fragment(learning_lang: str) -> Optional[str]:
+    """Per-language clarifying instructions for the "Show grammatical forms" option — the
+    generic instruction above doesn't fit every language (e.g. English has no grammatical
+    gender, Ukrainian/Russian/Polish are case languages). Returns None if learning_lang isn't
+    a recognized language or has no fragment file yet, so callers can fall back to the generic
+    text."""
+    if learning_lang not in LANG_VOICES:
+        return None
+    path = _GRAMMATICAL_FORMS_DIR / f"{learning_lang}.txt"
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return text or None
+
 
 def _split_multiline_pairs(parsed: list) -> list:
     """Split any pair whose 'learning'/'translation' field wrongly bundles multiple
@@ -691,9 +722,25 @@ def suggest():
     except (TypeError, ValueError):
         count = 1
     count = max(0, min(5, count))  # 0 = unconstrained (LLM decides)
-    instructions = str(data.get("instructions", "")).strip()[:500]  # cap to prevent prompt injection
-    if count and any(marker in instructions.lower() for marker in _AUTO_COUNT_MARKERS):
+    raw_instructions = str(data.get("instructions", "")).strip()
+    lower_raw = raw_instructions.lower()
+    # Both markers are checked on the raw string, not the capped one below, so a long
+    # combination of other checked options can't truncate a marker away unnoticed — the
+    # 543-char generic grammatical-forms text alone already exceeds the 500-char cap.
+    if count and any(marker in lower_raw for marker in _AUTO_COUNT_MARKERS):
         count = 0  # these options are unconstrained regardless of what the client sent
+    grammatical_forms_requested = _GRAMMATICAL_FORMS_MARKER in lower_raw
+    fragment = _load_grammatical_forms_fragment(learning_lang) if grammatical_forms_requested else None
+    if fragment and _GRAMMATICAL_FORMS_GENERIC_TEXT in raw_instructions:
+        # Swap the generic instruction for the per-language one, then cap only the
+        # remaining client-supplied text (other options / custom instruction) — the
+        # fragment itself is trusted, server-authored content, not attacker input.
+        rest = raw_instructions.replace(_GRAMMATICAL_FORMS_GENERIC_TEXT, "").strip()
+        instructions = f"{rest[:500]} {fragment}".strip()
+    else:
+        instructions = raw_instructions[:500]  # cap to prevent prompt injection
+        if fragment:
+            instructions = f"{instructions} {fragment}"
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
 
