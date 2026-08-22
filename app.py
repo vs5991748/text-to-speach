@@ -516,7 +516,7 @@ def upload():
                     }), 422
 
     # Optional: the AI generator's word/collocation, if that's how these pairs were produced —
-    # used to name the downloaded file instead of the generic "audio.mp3" (single-file mode only).
+    # used to name the downloaded file (MP3 or split-mode ZIP) instead of the generic name.
     word = request.form.get("word", "").strip()[:100]
 
     file_id = str(uuid.uuid4())
@@ -695,9 +695,9 @@ def _run_generation(job_id, input_path, learning_lang, target_speeds,
                 result_path = output_tmp.name
                 result_format = "mp3"
 
-        # Single-file downloads are named after the AI generator's word/collocation when the
-        # pairs came from there; split (one-file-per-record) downloads keep the fixed ZIP name.
-        download_name = f"{_slugify(word)}.mp3" if (result_format == "mp3" and word) else None
+        # Downloads are named after the AI generator's word/collocation when the pairs came
+        # from there, regardless of split mode; otherwise they keep the generic name.
+        download_name = f"{_slugify(word)}.{result_format}" if word else None
 
         with _jobs_lock:
             if _jobs[job_id]["status"] != "error":  # not already timed out
@@ -864,7 +864,7 @@ def download(job_id):
         return send_file(
             job["result_path"],
             as_attachment=True,
-            download_name="audio_pack.zip",
+            download_name=job.get("download_name") or "audio_pack.zip",
             mimetype="application/zip",
         )
     return send_file(
