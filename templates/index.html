@@ -796,6 +796,18 @@
                             style="display:none;width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0">
                         </div>
                     </div>
+                    <div style="display:flex;gap:16px;margin-top:8px">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                            <input type="checkbox" id="ai-is-verb"
+                                onchange="_toggleGate('ai-is-verb','ai-opt-reflexive','ai-opt-reflexive-label')" />
+                            <span style="font-size:.78rem;color:var(--muted)">The word/phrase above is a verb</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                            <input type="checkbox" id="ai-is-noun"
+                                onchange="_toggleGate('ai-is-noun','ai-opt-noun-forms','ai-opt-noun-forms-label')" />
+                            <span style="font-size:.78rem;color:var(--muted)">The word/phrase above is a noun</span>
+                        </label>
+                    </div>
                     <span id="ai-error" class="hint"
                         style="color:var(--red);display:none;margin-top:6px;display:block"></span>
 
@@ -855,6 +867,19 @@
                                             person (I, you, he/she, we, you-pl, they) for verbs. The LLM decides the
                                             exact quantity — count input is hidden.</span></span>
                                 </label>
+                                <label id="ai-opt-noun-forms-label" style="display:flex;align-items:flex-start;gap:8px;cursor:not-allowed;opacity:.45">
+                                    <input type="checkbox" id="ai-opt-noun-forms" disabled
+                                        title="Check &quot;The word/phrase above is a noun&quot; to enable this"
+                                        value="Each sentence must clearly demonstrate a different form of the noun or noun phrase itself: singular indefinite, singular definite, plural indefinite, and plural definite — one sentence per applicable form, correctly inflected/declined for that form. Skip any form the language lacks (e.g. no indefinite article, or no plural for the word) rather than forcing an unnatural sentence."
+                                        style="margin-top:3px;flex-shrink:0" onchange="_toggleAutoCount(this)" />
+                                    <span><span style="font-size:.84rem;color:var(--text)">Noun
+                                            forms</span><br><span style="font-size:.76rem;color:var(--muted)">One
+                                            sentence per singular/plural × definite/indefinite combination (e.g.
+                                            Romanian: <em>un câine</em> / <em>câinele</em> / <em>niște câini</em> /
+                                            <em>câinii</em>). The LLM decides the exact quantity — count input is
+                                            hidden. Only applies to nouns — check "The word/phrase above is a noun"
+                                            above to enable.</span></span>
+                                </label>
                                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                                     <input type="checkbox" value="Use formal/polite register."
                                         style="margin-top:3px;flex-shrink:0" />
@@ -870,15 +895,17 @@
                                             style="font-size:.76rem;color:var(--muted)">Everyday conversational
                                             language, contractions, and informal phrasing.</span></span>
                                 </label>
-                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox"
+                                <label id="ai-opt-reflexive-label" style="display:flex;align-items:flex-start;gap:8px;cursor:not-allowed;opacity:.45">
+                                    <input type="checkbox" id="ai-opt-reflexive" disabled
+                                        title="Check &quot;The word/phrase above is a verb&quot; to enable this"
                                         value="Use the reflexive form of the verb in every sentence (e.g. Romanian: 'a se uita', 'a se gândi'; Russian/Ukrainian: verbs ending in -ся/-сь; Polish: verbs with 'się')."
                                         style="margin-top:3px;flex-shrink:0" />
                                     <span><span style="font-size:.84rem;color:var(--text)">Reflexive
                                             form</span><br><span style="font-size:.76rem;color:var(--muted)">Sentences
                                             use the reflexive construction — the verb acts on the subject itself (ro:
                                             <em>a se uita</em>, ru: <em>учиться</em>, uk: <em>вчитися</em>, pl:
-                                            <em>uczyć się</em>).</span></span>
+                                            <em>uczyć się</em>). Only applies to verbs — check "The word/phrase above
+                                            is a verb" above to enable.</span></span>
                                 </label>
                             </div>
                             <input type="text" id="ai-custom-instruction"
@@ -1123,6 +1150,20 @@
         function _toggleAutoCount(cb) {
             const anyAuto = [...document.querySelectorAll('[onchange*="_toggleAutoCount"]')].some(c => c.checked);
             document.getElementById('ai-count').style.display = anyAuto ? 'none' : '';
+        }
+
+        // Some prompt options only make sense for a given part of speech —
+        // gate them behind the matching "the word/phrase above is a ___" checkbox
+        function _toggleGate(gateCbId, targetCbId, targetLabelId) {
+            const gateCb = document.getElementById(gateCbId);
+            const targetCb = document.getElementById(targetCbId);
+            const label = document.getElementById(targetLabelId);
+            if (!gateCb || !targetCb || !label) return;
+            const enabled = gateCb.checked;
+            targetCb.disabled = !enabled;
+            if (!enabled) targetCb.checked = false;
+            label.style.opacity = enabled ? '' : '.45';
+            label.style.cursor = enabled ? 'pointer' : 'not-allowed';
         }
 
         // Show manual panel by default
