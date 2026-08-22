@@ -163,7 +163,7 @@ python generate_audio.py --input sentences.example.en-uk.json --learning-lang en
 | `generate_audio.py` | Main CLI tool — reads sentence pairs, builds the audio track |
 | `tts_engines.py` | Edge TTS wrapper (speed control, mp3 output, `LANG_VOICES` defaults) |
 | `app.py` | Flask web interface |
-| `prompts/grammatical_forms/<lang>.txt` | Per-language instructions for the "Show grammatical forms" AI-generator option |
+| `prompts/grammatical_forms/<lang>.txt`, `prompts/noun_forms/<lang>.txt` | Per-language instructions for the "Show grammatical forms" / "Noun forms" AI-generator options |
 | `.env` | Runtime configuration (credentials, limits) |
 | `sentences.example.json` | Example input file, Romanian/English (JSON) |
 | `sentences.example.csv` | Example input file, Romanian/English (CSV) |

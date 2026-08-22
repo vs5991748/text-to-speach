@@ -27,7 +27,7 @@ There are two interfaces to the same core logic:
 | `tts_engines.py` | Edge TTS wrapper (speed control, mp3 output, `LANG_VOICES` defaults) |
 | `app.py` | Flask web interface — routes, auth, rate limiting, job handling, LLM phrase generation |
 | `templates/index.html` | Web UI (single-page form) |
-| `prompts/grammatical_forms/<lang>.txt` | Per-language clarifying instructions for the "Show grammatical forms" AI-generator option (see `doc/llm.md`) |
+| `prompts/grammatical_forms/<lang>.txt`, `prompts/noun_forms/<lang>.txt` | Per-language clarifying instructions for the "Show grammatical forms" / "Noun forms" AI-generator options (see `doc/llm.md`) |
 | `.env.example` | Template for runtime configuration (copy to `.env`) |
 | `sentences.example*.{json,csv}` | Example input files (Romanian/English, English/Ukrainian) |
 | `requirements.txt` | Python dependencies |

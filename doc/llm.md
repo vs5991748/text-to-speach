@@ -163,30 +163,40 @@ LLM error: LLM returned no usable content (token limit hit during reasoning — 
 
 ---
 
-## "Show grammatical forms" — per-language prompt fragments
+## Per-language prompt fragments ("Show grammatical forms" / "Noun forms")
 
-The **✨ AI phrase generator**'s "Show grammatical forms" checkbox asks the
-LLM to produce one sentence per grammatical form of the word (noun/pronoun/
-adjective declension, or verb conjugation). A single English instruction
-can't describe every supported language accurately — English has no
-grammatical gender, while Ukrainian/Russian/Polish are case languages with
-6–7 cases, for example — so the app looks up a per-language clarifying
-fragment in `prompts/grammatical_forms/<lang>.txt`, keyed by the learning
-language code (`ro`, `en`, `uk`, `ru`, `pl`, `pt`), and substitutes it into
-the request in place of the generic instruction.
+Two **✨ AI phrase generator** checkboxes ask the LLM to produce one sentence
+per grammatical form of the word — "Show grammatical forms" (verb
+conjugation; only enabled once you check "The word/phrase above is a
+verb") and "Noun forms" (singular/plural × definite/indefinite; only
+enabled once you check "...is a noun"). A single English instruction can't
+describe every supported language accurately — English has no grammatical
+gender and no definite-article suffix, Ukrainian/Russian/Polish are case
+languages with 6–7 cases and no articles at all, for example — so the app
+looks up a per-language clarifying fragment and substitutes it into the
+request in place of the generic instruction:
 
-**Scope:** this only applies to the "Show grammatical forms" option. Other
-prompt options (tenses, negative/mixed, questions, register, reflexive
-form, custom instruction) are unaffected.
+| Option | Fragment directory |
+|---|---|
+| Show grammatical forms | `prompts/grammatical_forms/<lang>.txt` |
+| Noun forms | `prompts/noun_forms/<lang>.txt` |
 
-**Adding a language:** create `prompts/grammatical_forms/<lang>.txt` with
-plain-text instructions covering both branches the LLM needs to choose
-between — noun/pronoun/adjective forms (gender/case/number as applicable)
-and verb forms (person/mood as applicable) — see the existing files for the
-expected level of detail. A learning language with no fragment file falls
-back to the generic (English-authored) instruction baked into
-`templates/index.html`, so nothing breaks — it just won't be as accurate
-for that language until a fragment is added.
+Each is keyed by the learning language code (`ro`, `en`, `uk`, `ru`, `pl`,
+`pt`). For case languages with no articles (uk/ru/pl), the `noun_forms`
+fragment substitutes case declension for the definite/indefinite
+distinction, since that distinction doesn't exist grammatically in those
+languages — asking for it anyway would just produce nonsense.
+
+**Scope:** this only applies to these two options. Other prompt options
+(tenses, negative/mixed, questions, register, reflexive form, custom
+instruction) are unaffected.
+
+**Adding a language:** create `prompts/grammatical_forms/<lang>.txt` and/or
+`prompts/noun_forms/<lang>.txt` with plain-text instructions — see the
+existing files for the expected level of detail. A learning language with
+no fragment file falls back to the generic (English-authored) instruction
+baked into `templates/index.html`, so nothing breaks — it just won't be as
+accurate for that language until a fragment is added.
 
 ---
 

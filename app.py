@@ -182,12 +182,32 @@ ALLOWED_EXTENSIONS = {".csv", ".json"}
 _AUTO_COUNT_MARKERS = (
     "one sentence per major verb tense",
     "grammatical form of the word or phrase itself",
+    "form of the noun or noun phrase itself",
 )
 
-# The exact "Show grammatical forms" checkbox value from templates/index.html — the
-# language-agnostic instruction it sends by default. When a per-language fragment exists
-# (see doc/spikes/architecture-per-language-grammatical-forms-spike.md), this text is
-# swapped out for that fragment; otherwise it's left as-is and serves as the fallback.
+
+def _make_fragment_loader(subdir: str):
+    """Build a loader for per-language clarifying fragments in prompts/<subdir>/<lang>.txt.
+    Returns None (caller falls back to the generic instruction) for an unrecognized language
+    code or one with no fragment file yet."""
+    base = Path(__file__).parent / "prompts" / subdir
+
+    def _load(learning_lang: str) -> Optional[str]:
+        if learning_lang not in LANG_VOICES:
+            return None
+        try:
+            text = (base / f"{learning_lang}.txt").read_text(encoding="utf-8").strip()
+        except OSError:
+            return None
+        return text or None
+
+    return _load
+
+
+# The exact checkbox value from templates/index.html for each option that has per-language
+# clarifying fragments (see doc/spikes/architecture-per-language-grammatical-forms-spike.md) —
+# the language-agnostic instruction it sends by default. When a per-language fragment exists,
+# this text is swapped out for it; otherwise it's left as-is and serves as the fallback.
 _GRAMMATICAL_FORMS_MARKER = "grammatical form of the word or phrase itself"
 _GRAMMATICAL_FORMS_GENERIC_TEXT = (
     "Each sentence must clearly demonstrate a different grammatical form of the word or phrase "
@@ -197,23 +217,24 @@ _GRAMMATICAL_FORMS_GENERIC_TEXT = (
     "grammatical persons (I, you-singular, he/she/it, we, you-plural, they), correctly conjugated "
     "for that person — six sentences minimum, one per person, do not stop early or skip any."
 )
-_GRAMMATICAL_FORMS_DIR = Path(__file__).parent / "prompts" / "grammatical_forms"
+_load_grammatical_forms_fragment = _make_fragment_loader("grammatical_forms")
 
+_NOUN_FORMS_MARKER = "form of the noun or noun phrase itself"
+_NOUN_FORMS_GENERIC_TEXT = (
+    "Each sentence must clearly demonstrate a different form of the noun or noun phrase itself: "
+    "singular indefinite, singular definite, plural indefinite, and plural definite — one sentence "
+    "per applicable form, correctly inflected/declined for that form. Skip any form the language "
+    "lacks (e.g. no indefinite article, or no plural for the word) rather than forcing an unnatural "
+    "sentence."
+)
+_load_noun_forms_fragment = _make_fragment_loader("noun_forms")
 
-def _load_grammatical_forms_fragment(learning_lang: str) -> Optional[str]:
-    """Per-language clarifying instructions for the "Show grammatical forms" option — the
-    generic instruction above doesn't fit every language (e.g. English has no grammatical
-    gender, Ukrainian/Russian/Polish are case languages). Returns None if learning_lang isn't
-    a recognized language or has no fragment file yet, so callers can fall back to the generic
-    text."""
-    if learning_lang not in LANG_VOICES:
-        return None
-    path = _GRAMMATICAL_FORMS_DIR / f"{learning_lang}.txt"
-    try:
-        text = path.read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
-    return text or None
+# (marker, generic checkbox text, loader) for each option with per-language fragments —
+# checked in order against the client's raw instructions string in the /suggest route.
+_FORM_FRAGMENT_SPECS = (
+    (_GRAMMATICAL_FORMS_MARKER, _GRAMMATICAL_FORMS_GENERIC_TEXT, _load_grammatical_forms_fragment),
+    (_NOUN_FORMS_MARKER, _NOUN_FORMS_GENERIC_TEXT, _load_noun_forms_fragment),
+)
 
 
 def _split_multiline_pairs(parsed: list) -> list:
@@ -765,18 +786,24 @@ def suggest():
     # 543-char generic grammatical-forms text alone already exceeds the 500-char cap.
     if count and any(marker in lower_raw for marker in _AUTO_COUNT_MARKERS):
         count = 0  # these options are unconstrained regardless of what the client sent
-    grammatical_forms_requested = _GRAMMATICAL_FORMS_MARKER in lower_raw
-    fragment = _load_grammatical_forms_fragment(learning_lang) if grammatical_forms_requested else None
-    if fragment and _GRAMMATICAL_FORMS_GENERIC_TEXT in raw_instructions:
-        # Swap the generic instruction for the per-language one, then cap only the
-        # remaining client-supplied text (other options / custom instruction) — the
-        # fragment itself is trusted, server-authored content, not attacker input.
-        rest = raw_instructions.replace(_GRAMMATICAL_FORMS_GENERIC_TEXT, "").strip()
-        instructions = f"{rest[:500]} {fragment}".strip()
-    else:
-        instructions = raw_instructions[:500]  # cap to prevent prompt injection
-        if fragment:
-            instructions = f"{instructions} {fragment}"
+    # Swap each selected option's generic instruction for its per-language fragment (if one
+    # exists for learning_lang), then cap only the remaining client-supplied text (other
+    # options / custom instruction) — fragments are trusted, server-authored content, so they
+    # aren't subject to that cap.
+    rest = raw_instructions
+    fragments_to_append = []
+    for marker, generic_text, load_fragment in _FORM_FRAGMENT_SPECS:
+        if marker not in lower_raw:
+            continue
+        fragment = load_fragment(learning_lang)
+        if not fragment:
+            continue  # no fragment for this language — leave the generic text as the fallback
+        if generic_text in rest:
+            rest = rest.replace(generic_text, "")
+        fragments_to_append.append(fragment)
+    instructions = rest.strip()[:500]  # cap to prevent prompt injection
+    for fragment in fragments_to_append:
+        instructions = f"{instructions} {fragment}".strip()
     if not word or not learning_lang:
         return jsonify({"error": "word and learning_lang are required."}), 400
 
