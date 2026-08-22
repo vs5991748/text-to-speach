@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 import zipfile
@@ -19,7 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, g, jsonify, render_template, request, send_file
+from flask import Flask, Response, abort, g, jsonify, redirect, render_template, request, send_file
 
 load_dotenv()
 
@@ -47,6 +48,13 @@ LLM_SU_DEFAULT = os.getenv("LLM_SU_DEFAULT", "").strip().lower()
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", 600) or 600)
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT_SECONDS", 60) or 60)
 LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", 3) or 3)
+
+# Google Drive upload (optional) — blank client ID/secret disables the feature entirely
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
+GOOGLE_DRIVE_FOLDER_NAME = os.getenv("GOOGLE_DRIVE_FOLDER_NAME", "TTS Audio").strip() or "TTS Audio"
+GOOGLE_DRIVE_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET and GOOGLE_REDIRECT_URI)
 
 # Built-in base URLs; override with LLM_<PROVIDER>_BASE_URL
 _LLM_DEFAULT_URLS = {
@@ -113,6 +121,7 @@ if not _users:
 
 from generate_audio import build_split_tracks, build_track, load_pairs, parse_voice_overrides, resolve_voice, _slugify, _slice_pairs, write_split_transcript, write_split_transcript_csv
 from tts_engines import LANG_VOICES, LANG_NAMES
+import google_drive as gdrive
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB upload limit
@@ -173,6 +182,57 @@ _last_suggest_time_lock = threading.Lock()
 # Background suggest jobs: suggest_id -> {status, pairs, error}
 _suggest_jobs: dict = {}
 _suggest_jobs_lock = threading.Lock()
+
+# Per-user Google OAuth tokens: username -> {refresh_token, access_token, expires_at, folder_id}.
+# Unlike the in-memory stores above, this is persisted to disk — a refresh_token is meant to be
+# a long-lived credential, and losing it on every restart would force re-authorizing constantly.
+_GOOGLE_TOKENS_FILE = Path(__file__).parent / ".google_tokens.json"
+_google_tokens_lock = threading.Lock()
+
+
+def _load_google_tokens() -> dict:
+    try:
+        return json.loads(_GOOGLE_TOKENS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_google_tokens(tokens: dict) -> None:
+    try:
+        _GOOGLE_TOKENS_FILE.write_text(json.dumps(tokens), encoding="utf-8")
+        os.chmod(_GOOGLE_TOKENS_FILE, 0o600)
+    except OSError as e:
+        print(f"[drive] failed to persist tokens: {e}", file=sys.stderr, flush=True)
+
+
+_google_tokens: dict = _load_google_tokens()
+
+# Short-lived CSRF nonce for the OAuth redirect round-trip: username -> nonce. Losing these on
+# restart just means an in-flight "Connect Google Drive" click has to be retried — acceptable.
+_google_oauth_states: dict = {}
+_google_oauth_states_lock = threading.Lock()
+
+
+def _google_access_token(username: str) -> Optional[str]:
+    """Returns a valid Drive access token for username, refreshing it first if it's expired
+    (or about to). None if the user hasn't connected Google Drive, or refresh failed."""
+    with _google_tokens_lock:
+        record = _google_tokens.get(username)
+    if not record:
+        return None
+    if record.get("expires_at", 0) > time.time() + 30:  # 30s safety margin
+        return record["access_token"]
+    try:
+        refreshed = gdrive.refresh_access_token(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, record["refresh_token"])
+    except gdrive.DriveError as e:
+        print(f"[drive] token refresh failed for {username}: {e}", file=sys.stderr, flush=True)
+        return None
+    with _google_tokens_lock:
+        _google_tokens[username]["access_token"] = refreshed["access_token"]
+        _google_tokens[username]["expires_at"] = time.time() + refreshed.get("expires_in", 3600)
+        _save_google_tokens(_google_tokens)
+    return refreshed["access_token"]
+
 
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
@@ -489,7 +549,8 @@ def index():
                            max_string_length=MAX_STRING_LENGTH,
                            rate_limit_window=RATE_LIMIT_WINDOW,
                            generation_timeout=GENERATION_TIMEOUT,
-                           cooldown_seconds=GENERATION_COOLDOWN)
+                           cooldown_seconds=GENERATION_COOLDOWN,
+                           google_drive_enabled=GOOGLE_DRIVE_ENABLED)
 
 
 @app.route("/upload", methods=["POST"])
@@ -901,6 +962,120 @@ def download(job_id):
         download_name=job.get("download_name") or "audio.mp3",
         mimetype="audio/mpeg",
     )
+
+
+@app.route("/auth/google")
+def google_auth_start():
+    """Redirect the browser to Google's OAuth consent screen. Scope is drive.file only —
+    the app can create/manage files it creates, nothing else in the user's Drive."""
+    if not GOOGLE_DRIVE_ENABLED:
+        abort(404)
+    username = g.username or "_anon_"
+    state = uuid.uuid4().hex
+    with _google_oauth_states_lock:
+        _google_oauth_states[username] = state
+    return redirect(gdrive.build_auth_url(GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI, state))
+
+
+@app.route("/auth/google/callback")
+def google_auth_callback():
+    if not GOOGLE_DRIVE_ENABLED:
+        abort(404)
+    username = g.username or "_anon_"
+
+    error = request.args.get("error")
+    if error:
+        return redirect(f"/?drive=error&msg={urllib.parse.quote(error)}")
+
+    code = request.args.get("code", "")
+    state = request.args.get("state", "")
+    with _google_oauth_states_lock:
+        expected_state = _google_oauth_states.pop(username, None)
+    if not code or not state or state != expected_state:
+        return redirect("/?drive=error&msg=Invalid+or+expired+authorization+request.")
+
+    try:
+        tokens = gdrive.exchange_code(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, code)
+    except gdrive.DriveError as e:
+        print(f"[drive] token exchange failed: {e}", file=sys.stderr, flush=True)
+        return redirect("/?drive=error&msg=Could+not+connect+to+Google+Drive.")
+
+    if "refresh_token" not in tokens:
+        # Google only returns a refresh_token on first consent (or with prompt=consent, which
+        # we always send) — if it's still missing here, ask the user to retry.
+        return redirect("/?drive=error&msg=No+refresh+token+received%2C+please+try+connecting+again.")
+
+    with _google_tokens_lock:
+        _google_tokens[username] = {
+            "refresh_token": tokens["refresh_token"],
+            "access_token": tokens["access_token"],
+            "expires_at": time.time() + tokens.get("expires_in", 3600),
+            "folder_id": None,
+        }
+        _save_google_tokens(_google_tokens)
+    return redirect("/?drive=connected")
+
+
+@app.route("/auth/google/status")
+def google_auth_status():
+    if not GOOGLE_DRIVE_ENABLED:
+        return jsonify({"enabled": False, "connected": False})
+    with _google_tokens_lock:
+        connected = (g.username or "_anon_") in _google_tokens
+    return jsonify({"enabled": True, "connected": connected})
+
+
+@app.route("/auth/google/disconnect", methods=["POST"])
+def google_auth_disconnect():
+    if not GOOGLE_DRIVE_ENABLED:
+        abort(404)
+    username = g.username or "_anon_"
+    with _google_tokens_lock:
+        record = _google_tokens.pop(username, None)
+        _save_google_tokens(_google_tokens)
+    if record:
+        gdrive.revoke_token(record.get("refresh_token") or record.get("access_token"))
+    return jsonify({"ok": True})
+
+
+@app.route("/drive/upload/<job_id>", methods=["POST"])
+def drive_upload(job_id):
+    """Upload a completed generation job's result file into the user's Drive, creating the
+    configured top-level folder on first use. The app only ever creates files/folders and
+    uploads into them — the drive.file OAuth scope makes that a hard guarantee, not just an
+    app-level convention."""
+    if not GOOGLE_DRIVE_ENABLED:
+        abort(404)
+    username = g.username or "_anon_"
+    access_token = _google_access_token(username)
+    if not access_token:
+        return jsonify({"error": "Google Drive is not connected."}), 400
+
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+    if not job or job["status"] != "done" or not job.get("result_path"):
+        return jsonify({"error": "No completed file for this job."}), 404
+    if not os.path.exists(job["result_path"]):
+        return jsonify({"error": "The generated file is no longer available. Please generate again."}), 410
+
+    is_zip = job.get("format") == "zip"
+    filename = job.get("download_name") or ("audio_pack.zip" if is_zip else "audio.mp3")
+
+    try:
+        with _google_tokens_lock:
+            folder_id = _google_tokens.get(username, {}).get("folder_id")
+        if not folder_id:
+            folder_id = gdrive.find_or_create_folder(access_token, GOOGLE_DRIVE_FOLDER_NAME)
+            with _google_tokens_lock:
+                if username in _google_tokens:
+                    _google_tokens[username]["folder_id"] = folder_id
+                    _save_google_tokens(_google_tokens)
+        result = gdrive.upload_file(access_token, folder_id, job["result_path"], filename)
+    except gdrive.DriveError as e:
+        print(f"[drive] upload failed: {e}", file=sys.stderr, flush=True)
+        return jsonify({"error": "Upload to Google Drive failed. Please try again."}), 502
+
+    return jsonify({"link": result.get("webViewLink"), "name": result.get("name")})
 
 
 if __name__ == "__main__":

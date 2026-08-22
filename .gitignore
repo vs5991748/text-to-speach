@@ -9,6 +9,9 @@ build/
 # Environment — contains credentials, never commit
 .env
 
+# Google Drive OAuth tokens — contains refresh tokens, never commit
+.google_tokens.json
+
 # Generated audio output
 *.mp3
 *.zip

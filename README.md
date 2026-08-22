@@ -18,6 +18,8 @@ voices, no API key required) for natural-sounding speech.
 | Web authentication | [doc/authorization.md](doc/authorization.md) |
 | Rate limits & quotas | [doc/limits.md](doc/limits.md) |
 | LLM / AI phrase generation | [doc/llm.md](doc/llm.md) |
+| Google Drive upload | [doc/google-drive.md](doc/google-drive.md) |
+| Google Cloud Console registration (Client ID/Secret) | [doc/google-cloud-setup.md](doc/google-cloud-setup.md) |
 | Examples | [doc/examples.md](doc/examples.md) |
 
 ## Setup
@@ -163,8 +165,10 @@ python generate_audio.py --input sentences.example.en-uk.json --learning-lang en
 | `generate_audio.py` | Main CLI tool — reads sentence pairs, builds the audio track |
 | `tts_engines.py` | Edge TTS wrapper (speed control, mp3 output, `LANG_VOICES` defaults) |
 | `app.py` | Flask web interface |
+| `google_drive.py` | Google Drive OAuth + upload helpers (see [doc/google-drive.md](doc/google-drive.md)) |
 | `prompts/grammatical_forms/<lang>.txt`, `prompts/noun_forms/<lang>.txt` | Per-language instructions for the "Show grammatical forms" / "Noun forms" AI-generator options |
 | `.env` | Runtime configuration (credentials, limits) |
+| `.google_tokens.json` | Per-user Google Drive refresh tokens (created at runtime, never committed) |
 | `sentences.example.json` | Example input file, Romanian/English (JSON) |
 | `sentences.example.csv` | Example input file, Romanian/English (CSV) |
 | `sentences.example.en-uk.json` | Example input file, English/Ukrainian (JSON) |

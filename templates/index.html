@@ -718,6 +718,10 @@
 
     <div class="container">
 
+        {% if google_drive_enabled %}
+        <div id="drive-oauth-notice" class="alert" style="display:none"></div>
+        {% endif %}
+
         <div class="page-tab-bar">
             <button class="page-tab active" id="ptab-source" onclick="switchPageTab('source')">
                 <span class="ptab-num">1</span> Source
@@ -1093,6 +1097,25 @@
                 </svg>
                 <span id="download-label">Download</span>
             </a>
+            {% if google_drive_enabled %}
+            <div style="margin-top:10px">
+                <button id="drive-connect-btn" class="btn btn-primary"
+                    style="display:none;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+                    onclick="connectGoogleDrive()">
+                    Connect Google Drive
+                </button>
+                <button id="drive-upload-btn" class="btn btn-primary"
+                    style="display:none;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+                    onclick="uploadToGoogleDrive(this)">
+                    Upload to Google Drive
+                </button>
+                <span id="drive-status" style="display:none;font-size:.8rem;margin-left:8px"></span>
+                <button id="drive-disconnect-btn" onclick="disconnectGoogleDrive()"
+                    style="display:none;background:none;border:none;color:var(--muted);font-size:.76rem;text-decoration:underline;cursor:pointer;margin-left:10px;padding:0">
+                    Disconnect
+                </button>
+            </div>
+            {% endif %}
             <button class="btn btn-primary"
                 style="margin-top:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
                 onclick="resetAll()">
@@ -1114,6 +1137,7 @@
         let pollingTimer = null;
         let activeTab = 'manual';
         let lastAiWord = ''; // most recent AI-generator word/collocation, used to name the downloaded audio file
+        let lastJobId = null; // most recently completed generation job, target for Drive upload
 
         // ── Page tab navigation ────────────────────────────────
         function switchPageTab(name) {
@@ -1376,6 +1400,93 @@
                 btn.disabled = false; btn.textContent = 'Generate';
             }
         }
+        {% endif %}
+
+        {% if google_drive_enabled %}
+        // ── Google Drive upload ─────────────────────────────────
+        async function _refreshDriveUI() {
+            if (!lastJobId) return;
+            let status;
+            try {
+                const r = await fetch('/auth/google/status');
+                status = await r.json();
+            } catch { return; }
+            const connectBtn = document.getElementById('drive-connect-btn');
+            const uploadBtn = document.getElementById('drive-upload-btn');
+            const disconnectBtn = document.getElementById('drive-disconnect-btn');
+            const statusEl = document.getElementById('drive-status');
+            statusEl.style.display = 'none';
+            if (status.connected) {
+                connectBtn.style.display = 'none';
+                uploadBtn.style.display = 'inline-flex';
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload to Google Drive';
+                disconnectBtn.style.display = 'inline';
+            } else {
+                connectBtn.style.display = 'inline-flex';
+                uploadBtn.style.display = 'none';
+                disconnectBtn.style.display = 'none';
+            }
+        }
+
+        function connectGoogleDrive() {
+            window.location.href = '/auth/google';
+        }
+
+        async function disconnectGoogleDrive() {
+            try {
+                await fetch('/auth/google/disconnect', { method: 'POST' });
+            } catch { /* best-effort — refresh UI regardless */ }
+            _refreshDriveUI();
+        }
+
+        async function uploadToGoogleDrive(btn) {
+            if (!lastJobId) return;
+            const statusEl = document.getElementById('drive-status');
+            btn.disabled = true; btn.textContent = 'Uploading…';
+            statusEl.style.display = 'none';
+            try {
+                const r = await fetch(`/drive/upload/${lastJobId}`, { method: 'POST' });
+                const data = await r.json();
+                if (!r.ok) {
+                    statusEl.textContent = data.error || 'Upload failed.';
+                    statusEl.style.color = 'var(--red)';
+                    statusEl.style.display = 'inline';
+                    btn.disabled = false; btn.textContent = 'Upload to Google Drive';
+                    return;
+                }
+                statusEl.innerHTML = data.link
+                    ? `Uploaded — <a href="${data.link}" target="_blank" rel="noopener">open in Drive</a>`
+                    : 'Uploaded.';
+                statusEl.style.color = 'var(--green)';
+                statusEl.style.display = 'inline';
+                btn.textContent = 'Uploaded';
+            } catch {
+                statusEl.textContent = 'Network error during upload.';
+                statusEl.style.color = 'var(--red)';
+                statusEl.style.display = 'inline';
+                btn.disabled = false; btn.textContent = 'Upload to Google Drive';
+            }
+        }
+
+        // Show a one-off status after returning from the Google OAuth redirect, then clean the URL
+        (function _handleDriveRedirect() {
+            const params = new URLSearchParams(window.location.search);
+            const drive = params.get('drive');
+            if (!drive) return;
+            const notice = document.getElementById('drive-oauth-notice');
+            if (drive === 'connected') {
+                notice.textContent = 'Google Drive connected — you can now upload generated files.';
+                notice.className = 'alert alert-success';
+            } else {
+                notice.textContent = `Google Drive connection failed: ${params.get('msg') || 'unknown error'}`;
+                notice.className = 'alert alert-error';
+            }
+            notice.style.display = 'block';
+            params.delete('drive'); params.delete('msg');
+            const qs = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+        })();
         {% endif %}
 
         async function submitManual() {
@@ -1641,6 +1752,8 @@
                         document.getElementById('download-label').textContent =
                             isZip ? 'Download audio_pack.zip' : 'Download audio.mp3';
                         document.getElementById('status-done').style.display = 'block';
+                        lastJobId = jobId;
+                        if (typeof _refreshDriveUI === 'function') _refreshDriveUI();
                         // Do NOT re-enable btn — start cooldown instead
                         fileId = null; // consumed
                         if (COOLDOWN_SECONDS && !IS_SU) {

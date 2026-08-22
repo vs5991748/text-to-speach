@@ -26,6 +26,7 @@ There are two interfaces to the same core logic:
 | `generate_audio.py` | Main CLI tool — reads sentence pairs, builds the audio track |
 | `tts_engines.py` | Edge TTS wrapper (speed control, mp3 output, `LANG_VOICES` defaults) |
 | `app.py` | Flask web interface — routes, auth, rate limiting, job handling, LLM phrase generation |
+| `google_drive.py` | Google Drive OAuth + upload helpers (see `doc/google-drive.md`) |
 | `templates/index.html` | Web UI (single-page form) |
 | `prompts/grammatical_forms/<lang>.txt`, `prompts/noun_forms/<lang>.txt` | Per-language clarifying instructions for the "Show grammatical forms" / "Noun forms" AI-generator options (see `doc/llm.md`) |
 | `.env.example` | Template for runtime configuration (copy to `.env`) |
@@ -38,6 +39,8 @@ There are two interfaces to the same core logic:
 | `doc/authorization.md` | HTTP Basic Auth, `SU_USERS`/`USERS` roles |
 | `doc/limits.md` | All rate/row/timeout limits, env vars, examples |
 | `doc/llm.md` | LLM provider config for the AI phrase generator |
+| `doc/google-drive.md` | Google Drive upload: how it works, env vars, token storage |
+| `doc/google-cloud-setup.md` | Step-by-step Google Cloud Console registration (Client ID/Secret) |
 | `doc/examples.md` | Worked CLI and web-UI examples |
 
 Read the relevant `doc/*.md` file before changing behavior in that area —
@@ -118,8 +121,16 @@ There is no automated test suite in this repo. Verify changes manually:
 - **Deployment**: the web app's in-memory job store assumes a single
   gunicorn worker (see `gunicorn.conf.py`, `Procfile`). Scaling to multiple
   workers/instances requires swapping in a shared store (e.g. Redis).
-- Never commit a real `.env` with credentials or API keys — only
-  `.env.example` should be tracked.
+- **Google Drive upload** (`google_drive.py`, optional — blank
+  `GOOGLE_CLIENT_ID`/`SECRET`/`REDIRECT_URI` disables it): each web-app
+  user connects their own Google account (`drive.file` scope — the app can
+  only create/manage files it created itself). Per-user refresh tokens
+  persist to `.google_tokens.json` (never committed), which carries the
+  same single-worker/single-machine assumption as the in-memory stores
+  above. See `doc/google-drive.md`, and `doc/google-cloud-setup.md` for the
+  Google Cloud Console registration steps.
+- Never commit a real `.env` (or `.google_tokens.json`) with credentials or
+  API keys — only `.env.example` should be tracked.
 
 ## Anti-Patterns (Forbidden)
 
