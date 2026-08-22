@@ -799,7 +799,7 @@
                     <div style="display:flex;gap:16px;margin-top:8px">
                         <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
                             <input type="checkbox" id="ai-is-verb"
-                                onchange="_toggleGate('ai-is-verb','ai-opt-reflexive','ai-opt-reflexive-label')" />
+                                onchange="_toggleGate('ai-is-verb','ai-opt-reflexive','ai-opt-reflexive-label'); _toggleGate('ai-is-verb','ai-opt-forms','ai-opt-forms-label')" />
                             <span style="font-size:.78rem;color:var(--muted)">The word/phrase above is a verb</span>
                         </label>
                         <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
@@ -857,15 +857,17 @@
                                             sentences are formed as questions — good for interrogative word order
                                             practice.</span></span>
                                 </label>
-                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-                                    <input type="checkbox"
+                                <label id="ai-opt-forms-label" style="display:flex;align-items:flex-start;gap:8px;cursor:not-allowed;opacity:.45">
+                                    <input type="checkbox" id="ai-opt-forms" disabled
+                                        title="Check &quot;The word/phrase above is a verb&quot; to enable this"
                                         value="Each sentence must clearly demonstrate a different grammatical form of the word or phrase itself. If it is a noun, pronoun, or adjective, produce one sentence for EACH combination of gender (masculine, feminine, neuter — skip genders the language lacks) and number (singular, plural), correctly declined. If it is a verb, produce one sentence for EACH of the six grammatical persons (I, you-singular, he/she/it, we, you-plural, they), correctly conjugated for that person — six sentences minimum, one per person, do not stop early or skip any."
                                         style="margin-top:3px;flex-shrink:0" onchange="_toggleAutoCount(this)" />
                                     <span><span style="font-size:.84rem;color:var(--text)">Show grammatical
                                             forms</span><br><span style="font-size:.76rem;color:var(--muted)">One
                                             sentence per gender/number combination for nouns, or one per grammatical
                                             person (I, you, he/she, we, you-pl, they) for verbs. The LLM decides the
-                                            exact quantity — count input is hidden.</span></span>
+                                            exact quantity — count input is hidden. Check "The word/phrase above is a
+                                            verb" above to enable.</span></span>
                                 </label>
                                 <label id="ai-opt-noun-forms-label" style="display:flex;align-items:flex-start;gap:8px;cursor:not-allowed;opacity:.45">
                                     <input type="checkbox" id="ai-opt-noun-forms" disabled
