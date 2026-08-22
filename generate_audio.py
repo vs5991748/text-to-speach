@@ -164,6 +164,18 @@ def write_split_transcript(pairs, learning_lang, translation_lang, output_dir):
     return path
 
 
+def write_split_transcript_csv(pairs, learning_lang, translation_lang, output_dir):
+    """Write a CSV pairing each split MP3's filename with its sentence and translation."""
+    path = os.path.join(output_dir, "sentences.csv")
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["filename", learning_lang, translation_lang])
+        for i, pair in enumerate(pairs, 1):
+            fname = f"{i:03d}_{_slugify(pair[learning_lang])}.mp3"
+            writer.writerow([fname, pair[learning_lang], pair.get(translation_lang, "")])
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -234,8 +246,9 @@ def main():
                     output_dir,
                 )
                 write_split_transcript(pairs, args.learning_lang, translation_lang, output_dir)
+                write_split_transcript_csv(pairs, args.learning_lang, translation_lang, output_dir)
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for fname in sorted(f for f in os.listdir(output_dir) if f.endswith((".mp3", ".txt"))):
+                    for fname in sorted(f for f in os.listdir(output_dir) if f.endswith((".mp3", ".txt", ".csv"))):
                         zf.write(os.path.join(output_dir, fname), fname)
             finally:
                 import shutil

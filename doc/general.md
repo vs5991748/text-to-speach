@@ -44,7 +44,7 @@ python app.py
 - **AI phrase generator** — type a single word or collocation and let an LLM write a natural sentence and its translation for you. Supports **prompt options** (verb tenses, negative forms, reflexive, grammatical forms, register) and a free-text custom instruction field. Requires an LLM provider to be configured (see [llm.md](llm.md)).
 
 The web interface supports all the same options as the CLI (speeds, pauses, voice overrides, skip-translation, split mode, row range) plus server-side [limits](limits.md) and [authentication](authorization.md).
-In **split mode** the download is a ZIP archive instead of a single MP3.
+In **split mode** the download is a ZIP archive instead of a single MP3. Alongside the numbered MP3s, the ZIP also includes `sentences.txt` (plain-text transcript) and `sentences.csv` (filename, learning-language sentence, translation) pairing each MP3 with its sentence — both are generated for every split-mode run, CLI or web.
 When the sentences came from the **AI phrase generator**, the downloaded file — MP3 or, in split mode, ZIP — is named after the word/collocation you typed (e.g. `commute.mp3` / `commute.zip`) instead of the generic `audio.mp3` / `audio_pack.zip`.
 
 ---
