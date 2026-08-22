@@ -795,6 +795,8 @@
                         <div id="ai-spinner"
                             style="display:none;width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0">
                         </div>
+                        <span id="ai-suggest-info"
+                            style="display:none;font-size:.76rem;color:var(--muted);white-space:nowrap"></span>
                     </div>
                     <div style="display:flex;gap:16px;margin-top:8px">
                         <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
@@ -1234,6 +1236,106 @@
             }
         }
 
+        // ── In-flight AI-suggest job: persisted so an F5 reload can resume polling ──
+        const SUGGEST_PENDING_KEY = 'tts_pending_suggest';
+        let _suggestPollTimer = null;
+        let _suggestElapsedTimer = null;
+
+        function _clearSuggestPending() {
+            localStorage.removeItem(SUGGEST_PENDING_KEY);
+        }
+
+        function _showSuggestInProgress(word, startedAt) {
+            document.getElementById('ai-spinner').style.display = 'block';
+            const infoEl = document.getElementById('ai-suggest-info');
+            infoEl.style.display = 'inline';
+            const label = word ? `Generating "${word}"… ` : 'Generating… ';
+            const tick = () => {
+                const secs = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+                infoEl.textContent = `${label}${secs}s`;
+            };
+            tick();
+            if (_suggestElapsedTimer) clearInterval(_suggestElapsedTimer);
+            _suggestElapsedTimer = setInterval(tick, 1000);
+        }
+
+        function _hideSuggestInProgress() {
+            document.getElementById('ai-spinner').style.display = 'none';
+            document.getElementById('ai-suggest-info').style.display = 'none';
+            if (_suggestElapsedTimer) { clearInterval(_suggestElapsedTimer); _suggestElapsedTimer = null; }
+        }
+
+        // Poll an in-flight /suggest job to completion. `btn` is null when resuming after a
+        // page reload (the user hasn't clicked Generate this time around).
+        function _pollSuggest(suggestId, word, startedAt, btn) {
+            const errEl = document.getElementById('ai-error');
+            _showSuggestInProgress(word, startedAt);
+            if (btn) btn.disabled = true;
+            if (_suggestPollTimer) clearInterval(_suggestPollTimer);
+            return new Promise((resolve, reject) => {
+                _suggestPollTimer = setInterval(async () => {
+                    try {
+                        const r = await fetch(`/suggest/status/${suggestId}`);
+                        if (r.status === 404) {
+                            clearInterval(_suggestPollTimer);
+                            reject(new Error('Previous request could not be found — the server may have restarted. Please try again.'));
+                            return;
+                        }
+                        const d = await r.json();
+                        if (d.status === 'done') {
+                            clearInterval(_suggestPollTimer);
+                            resolve(d.pairs || []);
+                        } else if (d.status === 'error') {
+                            clearInterval(_suggestPollTimer);
+                            reject(new Error(d.error || 'LLM error'));
+                        }
+                    } catch (e) { clearInterval(_suggestPollTimer); reject(e); }
+                }, 2000);
+            }).then(pairs => {
+                pairs.forEach((pair, idx) => {
+                    if (idx === 0) {
+                        const existingRows = document.querySelectorAll('.manual-pair-row');
+                        const lastRow = existingRows[existingRows.length - 1];
+                        if (!lastRow || lastRow.querySelector('.manual-learning').value.trim()) addManualRow();
+                    } else { addManualRow(); }
+                    const rows = document.querySelectorAll('.manual-pair-row');
+                    const last = rows[rows.length - 1];
+                    last.querySelector('.manual-learning').value = pair.learning || '';
+                    if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
+                });
+                lastAiWord = word;
+                _clearSuggestPending();
+                _hideSuggestInProgress();
+                const genBtn = btn || document.querySelector('[onclick="aiSuggest(this)"]');
+                if (genBtn) {
+                    const uiCooldown = SUGGEST_COOLDOWN_SECONDS || 60;
+                    if (!IS_SU) localStorage.setItem('tts_last_suggest', Date.now());
+                    _startSuggestTimer(uiCooldown, genBtn);
+                }
+                if (word) document.getElementById('ai-word').value = word;
+                document.getElementById('ai-word').select();
+            }).catch(err => {
+                console.error('[suggest]', err);
+                _clearSuggestPending();
+                _hideSuggestInProgress();
+                errEl.textContent = err.message || 'LLM error.'; errEl.style.display = 'block';
+                const genBtn = btn || document.querySelector('[onclick="aiSuggest(this)"]');
+                if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Generate'; }
+            });
+        }
+
+        // Resume a still-running /suggest job after a page reload, if one was in flight.
+        (function _restorePendingSuggest() {
+            const raw = localStorage.getItem(SUGGEST_PENDING_KEY);
+            if (!raw) return;
+            let pending;
+            try { pending = JSON.parse(raw); } catch { _clearSuggestPending(); return; }
+            if (!pending || !pending.suggestId) { _clearSuggestPending(); return; }
+            if (pending.word) document.getElementById('ai-word').value = pending.word;
+            const btn = document.querySelector('[onclick="aiSuggest(this)"]');
+            _pollSuggest(pending.suggestId, pending.word, pending.startedAt || Date.now(), btn);
+        })();
+
         async function aiSuggest(btn) {
             const word = document.getElementById('ai-word').value.trim();
             const learningLang = document.getElementById('manual-learning-lang').value.trim();
@@ -1250,7 +1352,6 @@
             if (!word) { errEl.textContent = 'Enter a word or collocation.'; errEl.style.display = 'block'; return; }
             if (!learningLang) { errEl.textContent = 'Set the learning language code first.'; errEl.style.display = 'block'; return; }
             btn.disabled = true; btn.textContent = 'Generate';
-            document.getElementById('ai-spinner').style.display = 'block';
             try {
                 // POST starts a background job — get suggest_id, then poll
                 const startRes = await fetch('/suggest', {
@@ -1263,54 +1364,16 @@
                     errEl.textContent = startData.error || 'Failed.';
                     errEl.style.display = 'block';
                     btn.disabled = false;
-                    document.getElementById('ai-spinner').style.display = 'none';
                     return;
                 }
                 const suggestId = startData.suggest_id;
-                // Poll until done or error
-                await new Promise((resolve, reject) => {
-                    const poll = setInterval(async () => {
-                        try {
-                            const r = await fetch(`/suggest/status/${suggestId}`);
-                            const d = await r.json();
-                            if (d.status === 'done') {
-                                clearInterval(poll);
-                                resolve(d.pairs || []);
-                            } else if (d.status === 'error') {
-                                clearInterval(poll);
-                                reject(new Error(d.error || 'LLM error'));
-                            }
-                        } catch (e) { clearInterval(poll); reject(e); }
-                    }, 2000);
-                }).then(pairs => {
-                    pairs.forEach((pair, idx) => {
-                        if (idx === 0) {
-                            const existingRows = document.querySelectorAll('.manual-pair-row');
-                            const lastRow = existingRows[existingRows.length - 1];
-                            if (!lastRow || lastRow.querySelector('.manual-learning').value.trim()) addManualRow();
-                        } else { addManualRow(); }
-                        const rows = document.querySelectorAll('.manual-pair-row');
-                        const last = rows[rows.length - 1];
-                        last.querySelector('.manual-learning').value = pair.learning || '';
-                        if (pair.translation) last.querySelector('.manual-translation').value = pair.translation;
-                    });
-                    lastAiWord = word;
-                    document.getElementById('ai-word').select();
-                    const uiCooldown = SUGGEST_COOLDOWN_SECONDS || 60;
-                    if (!IS_SU) localStorage.setItem('tts_last_suggest', Date.now());
-                    document.getElementById('ai-spinner').style.display = 'none';
-                    _startSuggestTimer(uiCooldown, btn);
-                }).catch(err => {
-                    console.error('[suggest]', err);
-                    errEl.textContent = err.message || 'LLM error.'; errEl.style.display = 'block';
-                    document.getElementById('ai-spinner').style.display = 'none';
-                    btn.disabled = false; btn.textContent = 'Generate';
-                });
+                const startedAt = Date.now();
+                localStorage.setItem(SUGGEST_PENDING_KEY, JSON.stringify({ suggestId, word, startedAt }));
+                await _pollSuggest(suggestId, word, startedAt, btn);
             } catch (err) {
                 console.error('[suggest]', err);
                 errEl.textContent = `Network error: ${err.message || err}`; errEl.style.display = 'block';
                 btn.disabled = false; btn.textContent = 'Generate';
-                document.getElementById('ai-spinner').style.display = 'none';
             }
         }
         {% endif %}
